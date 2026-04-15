@@ -1,0 +1,7 @@
+app/sales/documents/page.tsx(16,26): error TS2307: Cannot find module '@/components/ui/checkbox' or its corresponding type declarations.
+app/sales/leads/page.tsx(17,26): error TS2307: Cannot find module '@/components/ui/textarea' or its corresponding type declarations.
+app/sales/properties/page.tsx(16,26): error TS2307: Cannot find module '@/components/ui/checkbox' or its corresponding type declarations.
+app/sales/properties/page.tsx(19,24): error TS2307: Cannot find module '@/components/ui/slider' or its corresponding type declarations.
+app/sales/visits/page.tsx(16,26): error TS2307: Cannot find module '@/components/ui/calendar' or its corresponding type declarations.
+app/sales/visits/page.tsx(18,26): error TS2307: Cannot find module '@/components/ui/textarea' or its corresponding type declarations.
+app/sales/visits/page.tsx(19,24): error TS2307: Cannot find module '@/components/ui/switch' or its corresponding type declarations.

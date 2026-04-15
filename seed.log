@@ -1,0 +1,17 @@
+Starting seed check...
+users already has 9 rows. Skipping.
+projects already has 4 rows. Skipping.
+leads_customers already has 20 rows. Skipping.
+flats_inventory already has 32 rows. Skipping.
+inventory_items already has 15 rows. Skipping.
+assets_equipment already has 8 rows. Skipping.
+labour_attendance already has 20 rows. Skipping.
+daily_progress already has 8 rows. Skipping.
+vendors already has 8 rows. Skipping.
+financial_ledger already has 15 rows. Skipping.
+Seeding site_visits...
+site_visits seeded.
+Seeding documents...
+documents seeded.
+material_demands already has data or missing dependencies.
+Seed check complete.
