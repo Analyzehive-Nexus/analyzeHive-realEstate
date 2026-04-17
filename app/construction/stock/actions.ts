@@ -1,6 +1,6 @@
 "use server";
 
-import { supabase } from "@/lib/supabase";
+import { supabaseAdmin } from "@/lib/supabase";
 import { revalidatePath } from "next/cache";
 
 export async function addStockItem(formData: FormData) {
@@ -13,7 +13,7 @@ export async function addStockItem(formData: FormData) {
     return { error: "Missing required fields" };
   }
 
-  const { error } = await supabase.from("stock_items").insert({
+  const { error } = await supabaseAdmin.from("stock_items").insert({
     name,
     category,
     quantity,
@@ -36,8 +36,7 @@ export async function restockItem(formData: FormData) {
     return { error: "Invalid quantity or item" };
   }
 
-  // First fetch current quantity
-  const { data: item, error: fetchError } = await supabase
+  const { data: item, error: fetchError } = await supabaseAdmin
     .from("stock_items")
     .select("quantity")
     .eq("item_id", itemId)
@@ -49,7 +48,7 @@ export async function restockItem(formData: FormData) {
 
   const newQuantity = Number(item.quantity) + quantityToAdd;
 
-  const { error: updateError } = await supabase
+  const { error: updateError } = await supabaseAdmin
     .from("stock_items")
     .update({ quantity: newQuantity, last_updated: new Date().toISOString() })
     .eq("item_id", itemId);

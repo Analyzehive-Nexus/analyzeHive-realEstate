@@ -1,10 +1,10 @@
 "use server"
 
-import { supabase } from "@/lib/supabase"
+import { supabaseAdmin } from "@/lib/supabase"
 import { revalidatePath } from "next/cache"
 
 export async function updateFlatStatusAction(flatId: string, status: string) {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from("flats_inventory")
     .update({ status, updated_at: new Date().toISOString() })
     .eq("flat_id", flatId)

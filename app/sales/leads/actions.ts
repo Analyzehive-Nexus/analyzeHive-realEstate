@@ -1,6 +1,6 @@
 "use server"
 
-import { supabase } from "@/lib/supabase"
+import { supabaseAdmin } from "@/lib/supabase"
 import { revalidatePath } from "next/cache"
 import { headers } from "next/headers"
 
@@ -11,8 +11,7 @@ export async function createLeadAction(formData: FormData) {
   const source = formData.get("source") as string
   const assigned_broker = formData.get("assigned_broker") as string
 
-  // Insert into DB
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from("leads_customers")
     .insert([
       {
@@ -20,7 +19,7 @@ export async function createLeadAction(formData: FormData) {
         phone,
         email: email || null,
         source,
-        assigned_broker_id: assigned_broker, // Storing broker name/id here
+        assigned_broker_id: assigned_broker,
         status: "New"
       }
     ])
@@ -32,14 +31,11 @@ export async function createLeadAction(formData: FormData) {
     return { success: false, error: error.message }
   }
 
-  // Determine the baseline URL to trigger the webhook
-  // In a real app this would be an env var like process.env.NEXT_PUBLIC_APP_URL
   const headersList = headers()
   const host = headersList.get("host") || "localhost:3000"
   const protocol = host.includes("localhost") ? "http" : "https"
   const baseUrl = `${protocol}://${host}`
 
-  // Trigger Lead Created Webhook
   try {
     fetch(`${baseUrl}/api/webhooks/lead-created`, {
       method: "POST",
@@ -55,7 +51,7 @@ export async function createLeadAction(formData: FormData) {
 }
 
 export async function updateLeadStatusAction(id: string, status: string) {
-  const { error } = await supabase
+  const { error } = await supabaseAdmin
     .from("leads_customers")
     .update({ status })
     .eq("id", id)

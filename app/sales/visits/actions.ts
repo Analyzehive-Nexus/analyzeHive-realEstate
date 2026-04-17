@@ -1,18 +1,18 @@
 "use server"
 
-import { supabase } from "@/lib/supabase"
+import { supabaseAdmin } from "@/lib/supabase"
 import { revalidatePath } from "next/cache"
 
 export async function scheduleVisitAction(formData: FormData) {
   const lead_id = formData.get("lead_id") as string
   const flat_id = formData.get("flat_id") as string
-  const scheduled_at = formData.get("scheduled_at") as string // ISO datetime string
+  const scheduled_at = formData.get("scheduled_at") as string
 
   if (!lead_id || !flat_id || !scheduled_at) {
     return { success: false, error: "Missing required fields" }
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from("site_visits")
     .insert([{
       lead_id,
@@ -38,7 +38,7 @@ export async function scheduleVisitAction(formData: FormData) {
 }
 
 export async function updateVisitStatusAction(visitId: string, status: string) {
-  const { error } = await supabase
+  const { error } = await supabaseAdmin
     .from("site_visits")
     .update({ status })
     .eq("visit_id", visitId)

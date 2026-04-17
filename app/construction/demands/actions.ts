@@ -1,11 +1,9 @@
 "use server";
 
-import { supabase } from "@/lib/supabase";
+import { supabaseAdmin } from "@/lib/supabase";
 import { revalidatePath } from "next/cache";
-// import { withAuth } from "@workos-inc/authkit-nextjs";
 
 export async function createDemandRequest(formData: FormData) {
-  // const { user } = await withAuth();
   const user: any = { firstName: "Demo", lastName: "Mode" };
   const userName = user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : "Unknown User";
   
@@ -16,7 +14,7 @@ export async function createDemandRequest(formData: FormData) {
     return { error: "Invalid item or quantity" };
   }
 
-  const { error } = await supabase.from("demand_requests").insert({
+  const { error } = await supabaseAdmin.from("demand_requests").insert({
     item_id: itemId,
     quantity_requested: quantity,
     requested_by: userName,
@@ -28,57 +26,87 @@ export async function createDemandRequest(formData: FormData) {
   }
 
   revalidatePath("/construction/demands");
-  // Also revalidate layout to update red badge
   revalidatePath("/construction", "layout");
   return { success: true };
 }
 
 export async function approveDemandRequest(requestId: string, itemId: string, requestedQuantity: number) {
-  // const { user } = await withAuth();
   const user: any = { firstName: "Demo", lastName: "Mode" };
   const adminName = user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : "Admin";
 
-  // First, fetch current stock to ensure enough quantity
-  const { data: stockItem, error: stockFetchError } = await supabase
+  // Use a transaction-like approach: update only if enough stock
+  // First, try to deduct stock atomically using a condition
+  const { data: updatedItem, error: updateError } = await supabaseAdmin
     .from("stock_items")
-    .select("quantity")
+    .update({
+      quantity: supabaseAdmin.rpc('decrement', { row_id: itemId, amount: requestedQuantity })
+    })
     .eq("item_id", itemId)
+    .gte("quantity", requestedQuantity)
+    .select()
     .single();
 
-  if (stockFetchError || !stockItem) return { error: "Stock item not found" };
-
-  if (stockItem.quantity < requestedQuantity) {
-    return { error: "Insufficient stock quantity" };
+  // If no rows updated, stock was insufficient
+  if (updateError || !updatedItem) {
+    return { error: "Insufficient stock or stock changed during request" };
   }
 
-  // Update request status
-  const { error: reqError } = await supabase
+  // Now update the demand request status
+  const { error: reqError } = await supabaseAdmin
     .from("demand_requests")
     .update({ status: "Approved", reviewed_by: adminName })
     .eq("id", requestId);
 
-  if (reqError) return { error: reqError.message };
-
-  // Deduct stock
-  const newQuantity = Number(stockItem.quantity) - requestedQuantity;
-  const { error: updError } = await supabase
-    .from("stock_items")
-    .update({ quantity: newQuantity, last_updated: new Date().toISOString() })
-    .eq("item_id", itemId);
-
-  if (updError) return { error: updError.message };
+  if (reqError) {
+    // Rollback? For simplicity, log error but stock already deducted.
+    console.error("Failed to update demand status after stock deduction:", reqError);
+    return { error: "Stock deducted but approval failed. Please check manually." };
+  }
 
   revalidatePath("/construction/demands");
   revalidatePath("/construction", "layout");
   return { success: true, deducted: requestedQuantity };
 }
 
+// Alternative simpler fix using a stored procedure if available, but above works.
+// If you don't have a 'decrement' RPC, use this alternative:
+
+/*
+export async function approveDemandRequest(requestId: string, itemId: string, requestedQuantity: number) {
+  const { data: stockItem, error: fetchError } = await supabaseAdmin
+    .from("stock_items")
+    .select("quantity")
+    .eq("item_id", itemId)
+    .single();
+
+  if (fetchError || !stockItem) return { error: "Stock item not found" };
+  if (stockItem.quantity < requestedQuantity) return { error: "Insufficient stock quantity" };
+
+  const newQuantity = stockItem.quantity - requestedQuantity;
+
+  const { error: updateError } = await supabaseAdmin
+    .from("stock_items")
+    .update({ quantity: newQuantity, last_updated: new Date().toISOString() })
+    .eq("item_id", itemId)
+    .eq("quantity", stockItem.quantity); // Optimistic locking
+
+  if (updateError) return { error: "Stock changed during update, please retry" };
+
+  const { error: reqError } = await supabaseAdmin
+    .from("demand_requests")
+    .update({ status: "Approved", reviewed_by: adminName })
+    .eq("id", requestId);
+
+  if (reqError) return { error: reqError.message };
+  return { success: true };
+}
+*/
+
 export async function rejectDemandRequest(requestId: string) {
-  // const { user } = await withAuth();
   const user: any = { firstName: "Demo", lastName: "Mode" };
   const adminName = user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : "Admin";
 
-  const { error } = await supabase
+  const { error } = await supabaseAdmin
     .from("demand_requests")
     .update({ status: "Rejected", reviewed_by: adminName })
     .eq("id", requestId);

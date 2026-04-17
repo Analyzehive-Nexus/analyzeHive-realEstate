@@ -1,3 +1,4 @@
 import { handleAuth } from '@workos-inc/authkit-nextjs';
 
-export const GET = handleAuth();
+// Redirect to the dashboard after successful sign-in.
+export const GET = handleAuth({ returnPathname: '/dashboard' });

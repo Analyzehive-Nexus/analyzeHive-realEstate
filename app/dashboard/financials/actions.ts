@@ -1,6 +1,6 @@
 "use server";
 
-import { supabase } from "@/lib/supabase";
+import { supabaseAdmin } from "@/lib/supabase";
 import { revalidatePath } from "next/cache";
 
 export async function logExpense(formData: FormData) {
@@ -13,7 +13,7 @@ export async function logExpense(formData: FormData) {
     return { error: "Missing required fields" };
   }
 
-  const { error } = await supabase.from("expenses").insert({
+  const { error } = await supabaseAdmin.from("expenses").insert({
     category,
     amount,
     description,
@@ -25,7 +25,7 @@ export async function logExpense(formData: FormData) {
   }
 
   revalidatePath("/dashboard/financials");
-  revalidatePath("/dashboard"); // Update KPI
+  revalidatePath("/dashboard");
   return { success: true };
 }
 
@@ -35,14 +35,13 @@ export async function recordPayment(formData: FormData) {
   const amount = parseFloat(formData.get("amount") as string);
   const date = formData.get("date") as string;
   
-  // Implicitly mark new recorded payments as Received
   const status = formData.get("status") as string || "Received";
 
   if (!leadId || !flatId || !amount || !date) {
     return { error: "Missing required fields" };
   }
 
-  const { error } = await supabase.from("payments").insert({
+  const { error } = await supabaseAdmin.from("payments").insert({
     lead_id: leadId,
     flat_id: flatId,
     amount,
@@ -55,6 +54,6 @@ export async function recordPayment(formData: FormData) {
   }
 
   revalidatePath("/dashboard/financials");
-  revalidatePath("/dashboard"); // Update Revenue KPI
+  revalidatePath("/dashboard");
   return { success: true };
 }

@@ -1,11 +1,11 @@
-import { supabase } from './supabase';
+import { supabaseAdmin } from './supabase';
 
 // ==========================================
 // SALES FUNCTIONS
 // ==========================================
 
 export async function getLeads() {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('leads_customers')
     .select(`
       *,
@@ -17,7 +17,7 @@ export async function getLeads() {
 }
 
 export async function getLeadById(id: string) {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('leads_customers')
     .select(`
       *,
@@ -33,7 +33,7 @@ export async function getLeadById(id: string) {
 }
 
 export async function getLeadsStats() {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('leads_customers')
     .select('status, source');
   if (error) { console.error(error); return null; }
@@ -69,7 +69,7 @@ export async function createLead(lead: {
   flat_type_interest?: string;
   notes?: string;
 }) {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('leads_customers')
     .insert(lead)
     .select()
@@ -82,7 +82,7 @@ export async function updateLeadStatus(
   id: string, 
   status: string
 ) {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('leads_customers')
     .update({ 
       status, 
@@ -97,7 +97,7 @@ export async function updateLeadStatus(
 }
 
 export async function getFlatsInventory() {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('flats_inventory')
     .select('*')
     .order('project')
@@ -107,7 +107,7 @@ export async function getFlatsInventory() {
 }
 
 export async function getFlatsStats() {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('flats_inventory')
     .select('status');
   if (error) { console.error(error); return null; }
@@ -127,7 +127,7 @@ export async function updateFlatStatus(
   flatId: string, 
   status: string
 ) {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('flats_inventory')
     .update({ 
       status, 
@@ -141,7 +141,7 @@ export async function updateFlatStatus(
 }
 
 export async function getSiteVisits() {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('site_visits')
     .select(`
       *,
@@ -160,7 +160,7 @@ export async function getSiteVisits() {
 }
 
 export async function getDocuments() {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('documents')
     .select(`
       *,
@@ -173,7 +173,7 @@ export async function getDocuments() {
 }
 
 export async function getPayments() {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('payments')
     .select(`
       *,
@@ -188,7 +188,7 @@ export async function getPayments() {
 }
 
 export async function getBrokers() {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('users')
     .select('*')
     .in('role', ['BROKER', 'VP_SALES'])
@@ -202,7 +202,7 @@ export async function getBrokers() {
 // ==========================================
 
 export async function getInventoryItems() {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('inventory_items')
     .select('*')
     .order('category')
@@ -212,7 +212,7 @@ export async function getInventoryItems() {
 }
 
 export async function getInventoryStats() {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('inventory_items')
     .select(
       'current_stock_level, min_threshold'
@@ -236,7 +236,7 @@ export async function getInventoryStats() {
 }
 
 export async function getMaterialDemands() {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('material_demands')
     .select(`
       *,
@@ -256,7 +256,7 @@ export async function approveDemand(
   id: string, 
   approvedBy: string
 ) {
-  const { data: demand } = await supabase
+  const { data: demand } = await supabaseAdmin
     .from('material_demands')
     .select('*, item:inventory_items(*)')
     .eq('id', id)
@@ -264,7 +264,7 @@ export async function approveDemand(
 
   if (!demand) return null;
 
-  const { error: updateError } = await supabase
+  const { error: updateError } = await supabaseAdmin
     .from('material_demands')
     .update({
       status: 'Approved',
@@ -274,7 +274,7 @@ export async function approveDemand(
 
   if (updateError) return null;
 
-  await supabase
+  await supabaseAdmin
     .from('inventory_items')
     .update({
       current_stock_level: 
@@ -291,7 +291,7 @@ export async function rejectDemand(
   id: string, 
   rejectedBy: string
 ) {
-  const { error } = await supabase
+  const { error } = await supabaseAdmin
     .from('material_demands')
     .update({
       status: 'Rejected',
@@ -303,7 +303,7 @@ export async function rejectDemand(
 }
 
 export async function getAssets() {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('assets_equipment')
     .select(`
       *,
@@ -316,7 +316,7 @@ export async function getAssets() {
 }
 
 export async function getAssetsStats() {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('assets_equipment')
     .select('status');
   if (error) { console.error(error); return null; }
@@ -338,7 +338,7 @@ export async function getLabourAttendance(
   const targetDate = date || 
     new Date().toISOString().split('T')[0];
   
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('labour_attendance')
     .select('*')
     .eq('date', targetDate)
@@ -354,7 +354,7 @@ export async function getAttendanceStats(
   const targetDate = date || 
     new Date().toISOString().split('T')[0];
   
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('labour_attendance')
     .select('status, role')
     .eq('date', targetDate);
@@ -374,7 +374,7 @@ export async function getAttendanceStats(
 }
 
 export async function getDailyProgress() {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('daily_progress')
     .select(`
       *,
@@ -387,7 +387,7 @@ export async function getDailyProgress() {
 }
 
 export async function getVendors() {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('vendors')
     .select('*')
     .order('name');
@@ -400,7 +400,7 @@ export async function getVendors() {
 // ==========================================
 
 export async function getFinancialLedger() {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('financial_ledger')
     .select(`
       *,
@@ -413,7 +413,7 @@ export async function getFinancialLedger() {
 }
 
 export async function getFinancialStats() {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('financial_ledger')
     .select('transaction_type, amount, category')
     .eq('status', 'Approved');
@@ -452,7 +452,7 @@ export async function getFinancialStats() {
 }
 
 export async function getProjects() {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('projects')
     .select('*')
     .order('name');
@@ -461,7 +461,7 @@ export async function getProjects() {
 }
 
 export async function getProjectsStats() {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('projects')
     .select(
       'status, completion_percentage, ' +
