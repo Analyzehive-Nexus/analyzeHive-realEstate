@@ -21,6 +21,7 @@
     "@supabase/ssr": "^0.10.2",
     "@supabase/supabase-js": "^2.104.1",
     "@workos-inc/authkit-nextjs": "^2.17.0",
+    "@workos-inc/node": "^8.13.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^3.6.0",
