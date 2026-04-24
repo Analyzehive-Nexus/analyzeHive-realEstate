@@ -3,7 +3,6 @@ import { authkitMiddleware } from '@workos-inc/authkit-nextjs';
 export default authkitMiddleware({
   // Ensure the redirect URI is passed if the env var isn't picked up automatically
   redirectUri: process.env.WORKOS_REDIRECT_URI,
-  unauthenticatedRedirect: '/',
 });
 
 export const config = {

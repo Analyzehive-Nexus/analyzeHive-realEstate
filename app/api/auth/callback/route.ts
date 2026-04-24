@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import WorkOS from '@workos-inc/node';
+import { WorkOS } from '@workos-inc/node';
 import { supabaseAdmin } from '@/lib/supabase';
 
 export async function GET(req: NextRequest) {
