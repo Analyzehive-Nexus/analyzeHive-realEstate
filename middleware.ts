@@ -1,10 +1,13 @@
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import { authkitMiddleware } from '@workos-inc/authkit-nextjs';
 
-export function middleware(request: NextRequest) {
-  return NextResponse.next();
-}
+export default authkitMiddleware({
+  // Ensure the redirect URI is passed if the env var isn't picked up automatically
+  redirectUri: process.env.WORKOS_REDIRECT_URI,
+  unauthenticatedRedirect: '/',
+});
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
+  matcher: [
+    '/((?!_next/static|_next/image|favicon.ico|api/auth).*)',
+  ],
 };
