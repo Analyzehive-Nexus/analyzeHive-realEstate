@@ -83,7 +83,7 @@ export default function SalesDashboardClient() {
     ]);
 
     setKpis(computeKPIs(leadsRes.data || [], visitsRes.data || [], flatsRes.data || []));
-    setMessages(messagesRes.data as Message[] || []);
+    setMessages(messagesRes.data as unknown as Message[] || []);
     setLoading(false);
   };
 

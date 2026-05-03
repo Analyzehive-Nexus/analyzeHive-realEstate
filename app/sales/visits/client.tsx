@@ -97,7 +97,7 @@ export default function VisitsClient() {
       console.error("Error fetching visits:", visitsError);
       toast({ title: "Error", description: visitsError.message, variant: "destructive" });
     } else {
-      setVisits(visitsData as Visit[]);
+      setVisits(visitsData as unknown as Visit[]);
     }
 
     // Fetch leads for reschedule dropdown (optional, we can keep lead name from visit)

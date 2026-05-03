@@ -1,8 +1,8 @@
+'use client';
+
 import { EmptyState } from "@/components/ui/empty-state";
 import { SkeletonCard } from "@/components/ui/skeleton-card";
 import { SkeletonTable } from "@/components/ui/skeleton-table";
-'use client';
-
 import { useEffect, useState, useMemo } from 'react';
 import { createBrowserClient } from '@/lib/supabase-browser';
 import { useToast } from '@/components/ui/toast';
@@ -1281,7 +1281,9 @@ export default function LeadsPage() {
               type="button"
               variant="outline"
               className="rounded-[10px] h-10 px-6"
-              onClick={() => setShowEditSheet(false)}
+              onClick={() => {
+                setShowEditSheet(false);
+              }}
             >
               Cancel
             </Button>

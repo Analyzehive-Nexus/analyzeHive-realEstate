@@ -103,7 +103,7 @@ export default function DocumentsClient() {
       console.error("Error fetching documents:", docsError);
       toast({ title: "Error", description: docsError.message, variant: "destructive" });
     } else {
-      setDocuments(docsData as Document[]);
+      setDocuments(docsData as unknown as Document[]);
     }
 
     // Fetch leads for dropdown

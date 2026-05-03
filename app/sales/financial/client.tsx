@@ -111,7 +111,7 @@ export default function FinancialClient() {
       console.error("Error fetching ledger:", error);
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
-      setLedger(data as LedgerEntry[]);
+      setLedger(data as unknown as LedgerEntry[]);
     }
     setLoading(false);
   };

@@ -97,7 +97,7 @@ export async function fetchConstructionData() {
   return {
     projects: projects || [],
     criticalStock,
-    pendingDemands: (demands || []) as DemandRequest[],
+    pendingDemands: (demands || []) as unknown as DemandRequest[],
     labourStats: { totalWorkers, present, absent, halfDay },
     attendanceTrend,
     assetsStats: { totalAssets, activeAssets },
