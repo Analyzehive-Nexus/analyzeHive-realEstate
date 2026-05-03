@@ -6,6 +6,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTr
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
+import { ModuleSwitcher } from "@/components/shared/ModuleSwitcher"
 
 export default function SalesLayout({ children }: { children: ReactNode }) {
   const user = { firstName: "Demo", lastName: "Mode", role: "BROKER" }
@@ -53,6 +54,7 @@ export default function SalesLayout({ children }: { children: ReactNode }) {
 
           {/* Right Actions */}
           <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+            <ModuleSwitcher />
             <Sheet>
               <SheetTrigger asChild>
                 <Button className="bg-[#0066FF] hover:bg-[#0052CC] text-white font-semibold px-4 py-2 rounded-[10px] text-sm shadow-md transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 gap-2 hidden sm:flex h-9">

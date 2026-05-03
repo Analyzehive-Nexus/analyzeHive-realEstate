@@ -10,6 +10,7 @@ export const metadata: Metadata = {
 };
 
 import { ToastProvider } from "@/components/ui/toast";
+import { ProjectProvider } from "@/lib/contexts/ProjectContext";
 
 export default function RootLayout({
   children,
@@ -19,7 +20,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <ToastProvider>{children}</ToastProvider>
+        <ToastProvider>
+          <ProjectProvider>
+            {children}
+          </ProjectProvider>
+        </ToastProvider>
       </body>
     </html>
   );

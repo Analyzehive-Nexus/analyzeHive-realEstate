@@ -4,6 +4,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { LayoutDashboard, Package, ClipboardList, Truck, HardHat, Users, Handshake, Camera, PieChart, FileCheck, Settings } from "lucide-react"
 import Logo from "@/components/shared/Logo"
+import { ProjectSwitcher } from "@/components/shared/ProjectSwitcher"
 
 const menuGroups = [
   {
@@ -53,6 +54,7 @@ export function ConstructionSidebar({ user }: { user: any }) {
       }}
     >
       <Logo />
+      <ProjectSwitcher />
 
       <div className="flex flex-1 flex-col overflow-y-auto px-0 py-4 custom-scrollbar">
         {menuGroups.map((group, gIdx) => (
@@ -120,9 +122,9 @@ export function ConstructionSidebar({ user }: { user: any }) {
             </span>
           </div>
         </div>
-        <button className="ml-auto text-slate-400 hover:text-white transition-colors">
+        <Link href="/settings/profile" className="ml-auto text-slate-400 hover:text-white transition-colors">
           <Settings className="h-4 w-4" />
-        </button>
+        </Link>
       </div>
     </div>
   )

@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
 import { addAsset, updateAssetStatus } from "./actions";
+import { EmptyState } from "@/components/ui/empty-state";
 
 type Asset = {
   asset_id: string;

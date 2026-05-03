@@ -1,3 +1,6 @@
+import { EmptyState } from "@/components/ui/empty-state";
+import { SkeletonCard } from "@/components/ui/skeleton-card";
+import { SkeletonTable } from "@/components/ui/skeleton-table";
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
@@ -522,6 +525,25 @@ export default function LeadsPage() {
     );
   }
 
+  if (loading) {
+    return (
+      <div className="p-8 space-y-6">
+        <div className="flex justify-between items-center">
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-10 w-32" />
+        </div>
+        <div className="grid gap-4 md:grid-cols-5">
+          {Array.from({ length: 5 }).map((_, i) => <SkeletonCard key={i} />)}
+        </div>
+        <div className="flex justify-between">
+          <Skeleton className="h-10 w-64" />
+          <Skeleton className="h-10 w-32" />
+        </div>
+        <SkeletonTable columns={8} />
+      </div>
+    );
+  }
+
   return (
     <div className="p-8 max-w-[1700px] mx-auto pb-24 space-y-8 font-sans">
       
@@ -863,12 +885,12 @@ export default function LeadsPage() {
                 ))}
              </div>
           ) : filteredLeads.length === 0 ? (
-            <div className="text-center py-20">
-              <Users className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-bold text-gray-900">{searchQuery ? 'No results found' : 'No leads found'}</h3>
-              <p className="text-gray-500 mb-6">{searchQuery ? 'Try adjusting your filters' : 'Add your first lead'}</p>
-              {!searchQuery && <Button onClick={() => setShowAddSheet(true)} className="rounded-[10px] bg-[#0066FF]">Add First Lead</Button>}
-            </div>
+            <EmptyState
+              icon={<Users className="h-10 w-10 text-gray-400" />}
+              title={searchQuery ? 'No results found' : 'No leads found'}
+              description={searchQuery ? 'Try adjusting your filters' : 'Add your first lead'}
+              action={!searchQuery ? { label: "Add Lead", onClick: () => setShowAddSheet(true) } : undefined}
+            />
           ) : (
           <Table>
             <TableHeader className="bg-[#F8FAFC] border-b border-gray-200">

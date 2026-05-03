@@ -1,17 +1,24 @@
 "use client"
 
-import { Users, UserPlus, FileCheck, CheckCircle2, TrendingUp, Medal, Star } from "lucide-react"
+import { Users, UserPlus, FileCheck, CheckCircle2, TrendingUp, Medal, Star, Download } from "lucide-react"
 
 import { Card } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 import { LineChart, Line, ResponsiveContainer, YAxis } from "recharts"
-const SectionHeading = ({ title }: { title: string }) => (
+import { EmptyState } from "@/components/ui/empty-state";
+const SectionHeading = ({ title, onExport }: { title: string, onExport?: () => void }) => (
   <div className="flex items-center justify-between mb-4">
     <h2 className="text-lg font-semibold text-[#0F172A] tracking-tight">{title}</h2>
+    {onExport && (
+      <Button variant="ghost" onClick={onExport} className="text-[#0066FF] font-semibold hover:bg-blue-50 rounded-[10px] h-8 px-3 text-[13px] gap-2">
+        <Download className="w-4 h-4" /> Export Data
+      </Button>
+    )}
   </div>
 );
 
@@ -37,6 +44,30 @@ const InteractivePearlCard = ({ children, className = "" }: { children: React.Re
 );
 
 export default function TeamClient({ salesTeam, constTeam }: { salesTeam: any[], constTeam: any[] }) {
+
+  const exportSalesCSV = () => {
+    const rows = salesTeam.map((b) => [b.name, b.metrics.conv, b.metrics.rev, b.ach]);
+    const csv = [["Broker", "Conversions", "Revenue", "Rating"], ...rows].map(row => row.join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `sales_team.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportConstCSV = () => {
+    const rows = constTeam.map((b) => [b.name, b.metrics.tasks, b.metrics.onTime, b.ach]);
+    const csv = [["Member", "Reports", "Avg Rating", "Status"], ...rows].map(row => row.join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `construction_team.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="p-8 max-w-[1800px] mx-auto pb-24 space-y-10 font-sans text-[#0F172A]">
@@ -141,7 +172,7 @@ export default function TeamClient({ salesTeam, constTeam }: { salesTeam: any[],
 
           <section className="grid xl:grid-cols-3 gap-8">
             <div className="xl:col-span-2 flex flex-col">
-              <SectionHeading title="Full Leaderboard" />
+              <SectionHeading title="Full Leaderboard" onExport={exportSalesCSV} />
               <PearlCard className="flex-1">
                  <Table>
                    <TableHeader className="bg-[#FAFBFC] border-b border-[#E8ECF0]">
@@ -296,7 +327,7 @@ export default function TeamClient({ salesTeam, constTeam }: { salesTeam: any[],
 
           <section className="grid xl:grid-cols-3 gap-8">
             <div className="xl:col-span-2 flex flex-col">
-              <SectionHeading title="Full Leaderboard" />
+              <SectionHeading title="Full Leaderboard" onExport={exportConstCSV} />
               <PearlCard className="flex-1">
                  <Table>
                    <TableHeader className="bg-[#FAFBFC] border-b border-[#E8ECF0]">

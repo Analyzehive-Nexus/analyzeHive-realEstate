@@ -15,6 +15,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/toast";
 import { approveDemandRequest, rejectDemandRequest } from "./actions";
+import { EmptyState } from "@/components/ui/empty-state";
 
 export default function AdminView({ requests }: { requests: any[] }) {
   const { toast } = useToast();

@@ -1,352 +1,494 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { createBrowserClient } from '@/lib/supabase-browser'
-import { 
-  Wallet, DollarSign, TrendingUp, Clock, Search, Plus, 
-  ArrowDownRight, ArrowUpRight, FileText, CheckCircle2, 
-  XCircle, Filter, Loader2, IndianRupee
-} from "lucide-react"
+import { useEffect, useState } from "react";
+import { createBrowserClient } from "@/lib/supabase-browser";
+import { useProject } from "@/lib/contexts/ProjectContext";
+import { logExpense } from "./actions";
+import {
+  Wallet,
+  TrendingUp,
+  TrendingDown,
+  IndianRupee,
+  Plus,
+  Download,
+  Search,
+  Filter,
+  Loader2,
+} from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/components/ui/toast";
+import { EmptyState } from "@/components/ui/empty-state";
 
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog"
-import { useToast } from "@/components/ui/toast"
-
-function getStatusStyle(status: string) {
-  switch ((status || '').toLowerCase()) {
-    case 'completed': return { bg: "bg-green-100", text: "text-green-700", icon: CheckCircle2 }
-    case 'pending': return { bg: "bg-amber-100", text: "text-amber-700", icon: Clock }
-    case 'failed': return { bg: "bg-red-100", text: "text-red-700", icon: XCircle }
-    default: return { bg: "bg-gray-100", text: "text-gray-700", icon: FileText }
-  }
-}
+type LedgerEntry = {
+  id: string;
+  transaction_type: "Income" | "Expense";
+  category: string;
+  amount: number;
+  description: string | null;
+  transaction_date: string;
+  status: string;
+  created_at: string;
+  logged_by: { name: string } | null;
+};
 
 export default function FinancialClient() {
-  const [ledger, setLedger] = useState<any[]>([]);
-  const [leads, setLeads] = useState<any[]>([]);
+  const supabase = createBrowserClient();
+  const { toast } = useToast();
+  const { activeProject } = useProject();
+
+  const [ledger, setLedger] = useState<LedgerEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [addingLoading, setAddingLoading] = useState(false);
-  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
+  const [adding, setAdding] = useState(false);
+
+  // Filters
   const [searchTerm, setSearchTerm] = useState("");
-  
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+
   const [formData, setFormData] = useState({
-    leadId: '', amount: '', type: 'Credit', receiptNo: '', status: 'Completed', notes: ''
+    category: "Operations",
+    amount: "",
+    description: "",
+    transaction_date: new Date().toISOString().split("T")[0],
+    status: "Approved",
   });
 
-  const { toast } = useToast();
-  const supabase = createBrowserClient();
+  const fetchData = async () => {
+    setLoading(true);
+    let query = supabase
+      .from("financial_ledger")
+      .select(
+        `
+        id,
+        transaction_type,
+        category,
+        amount,
+        description,
+        transaction_date,
+        status,
+        created_at,
+        logged_by:users(id, name)
+      `
+      )
+      .order("transaction_date", { ascending: false });
 
-  // Generate a random receipt number for the mock workflow
-  const generateReceiptNo = () => `RCT-${Math.floor(100000 + Math.random() * 900000)}`;
+    if (activeProject) {
+      query = query.eq("project_id", activeProject.id);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error("Error fetching ledger:", error);
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } else {
+      setLedger(data as LedgerEntry[]);
+    }
+    setLoading(false);
+  };
 
   useEffect(() => {
     fetchData();
 
-    // Real-time subscriptions
     const channel = supabase
-      .channel('financial-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'financial_ledger' }, () => fetchData())
+      .channel("financial-ledger")
+      .on("postgres_changes", { event: "*", schema: "public", table: "financial_ledger" }, () => fetchData())
       .subscribe();
-      
-    return () => { supabase.removeChannel(channel); };
-  }, []);
 
-  const fetchData = async () => {
-    setLoading(true);
-    
-    const { data: ledgerData, error } = await supabase
-      .from('financial_ledger')
-      .select(`
-        *,
-        lead:leads_customers(id, name, phone, project_interest)
-      `)
-      .order('transaction_date', { ascending: false });
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [activeProject]);
 
-    if (ledgerData) setLedger(ledgerData);
+  // Compute KPIs from real data
+  const totalRevenue = ledger
+    .filter((e) => e.transaction_type === "Income" && e.status === "Approved")
+    .reduce((sum, e) => sum + e.amount, 0);
 
-    const { data: leadsData } = await supabase.from('leads_customers').select('id, name, phone, project_interest').eq('status', 'Converted'); // Or any other appropriate filter
-    if (leadsData) setLeads(leadsData);
-    
-    if(!leadsData || leadsData.length === 0) {
-       // fallback generic leads
-       const { data: allLeadsData } = await supabase.from('leads_customers').select('id, name, phone, project_interest').limit(50);
-       if (allLeadsData) setLeads(allLeadsData);
-    }
+  const totalExpenses = ledger
+    .filter((e) => e.transaction_type === "Expense" && e.status === "Approved")
+    .reduce((sum, e) => sum + e.amount, 0);
 
-    setLoading(false);
+  const netProfit = totalRevenue - totalExpenses;
+  const profitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
+
+  // Filter ledger entries
+  const filteredLedger = ledger.filter((entry) => {
+    const matchesSearch =
+      !searchTerm ||
+      entry.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (entry.description && entry.description.toLowerCase().includes(searchTerm.toLowerCase()));
+
+    const matchesType = typeFilter === "all" || entry.transaction_type === typeFilter;
+    const matchesStatus = statusFilter === "all" || entry.status === statusFilter;
+
+    let matchesDate = true;
+    if (dateFrom && entry.transaction_date < dateFrom) matchesDate = false;
+    if (dateTo && entry.transaction_date > dateTo) matchesDate = false;
+
+    return matchesSearch && matchesType && matchesStatus && matchesDate;
+  });
+
+  // Export CSV
+  const exportCSV = () => {
+    const headers = [
+      "Date",
+      "Type",
+      "Category",
+      "Amount (₹)",
+      "Status",
+      "Description",
+    ];
+    const rows = filteredLedger.map((e) => [
+      e.transaction_date,
+      e.transaction_type,
+      e.category,
+      e.amount,
+      e.status,
+      e.description || "",
+    ]);
+    const csvContent = [headers, ...rows].map((row) => row.join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `financial_ledger_${new Date().toISOString().split("T")[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast({ title: "CSV exported successfully" });
   };
 
-  const addPayment = async () => {
-    if (!formData.leadId || !formData.amount) {
-      toast({ title: 'Validation Error', description: 'Please fill all required fields.', variant: 'destructive' });
+  const handleAddExpense = async () => {
+    if (!formData.amount || !formData.transaction_date) {
+      toast({ title: "Missing required fields", variant: "destructive" });
       return;
     }
-    
-    setAddingLoading(true);
-    
-    const { error } = await supabase
-      .from('financial_ledger')
-      .insert({
-        lead_id: formData.leadId,
-        amount: parseFloat(formData.amount),
-        type: formData.type,
-        receipt_no: formData.receiptNo || generateReceiptNo(),
-        status: formData.status,
-        notes: formData.notes,
-        transaction_date: new Date().toISOString()
-      });
-      
-    setAddingLoading(false);
-    
-    if (error) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
-    } else {
-      toast({ title: 'Payment recorded successfully' });
-      setShowAddDialog(false);
-      setFormData({ leadId: '', amount: '', type: 'Credit', receiptNo: '', status: 'Completed', notes: '' });
+
+    setAdding(true);
+    const fd = new FormData();
+    fd.append("category", formData.category);
+    fd.append("amount", formData.amount);
+    fd.append("description", formData.description);
+    fd.append("transaction_date", formData.transaction_date);
+    fd.append("status", formData.status);
+    if (activeProject) {
+      fd.append("project_id", activeProject.id);
     }
+
+    const result = await logExpense(fd);
+    if (result.error) {
+      toast({ title: "Error", description: result.error, variant: "destructive" });
+    } else {
+      toast({ title: "Expense logged successfully" });
+      setAddOpen(false);
+      setFormData({
+        category: "Operations",
+        amount: "",
+        description: "",
+        transaction_date: new Date().toISOString().split("T")[0],
+        status: "Approved",
+      });
+    }
+    setAdding(false);
   };
 
-  const formatCur = (v: number) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(v);
-
-  // Compute stats
-  const totalRevenue = ledger.filter(l => l.type === 'Credit' && l.status === 'Completed').reduce((sum, l) => sum + (Number(l.amount) || 0), 0);
-  const pendingPayments = ledger.filter(l => l.status === 'Pending').reduce((sum, l) => sum + (Number(l.amount) || 0), 0);
-  
-  // Get active distinct deals based on completed payments (unique lead_id)
-  const activeDeals = new Set(ledger.filter(l => l.type === 'Credit' && l.status === 'Completed' && l.lead_id).map(l => l.lead_id)).size;
-
-  const filteredLedger = ledger.filter(l => 
-    l.receipt_no?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    l.lead?.name?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const formatCurrency = (value: number) => {
+    if (value >= 1e7) return `₹${(value / 1e7).toFixed(2)}Cr`;
+    if (value >= 1e5) return `₹${(value / 1e5).toFixed(2)}L`;
+    return `₹${value.toLocaleString("en-IN")}`;
+  };
 
   if (loading) {
     return (
-      <div className="p-8 max-w-[1700px] mx-auto pb-24 space-y-8 animate-pulse text-center pt-20">
-         <Loader2 className="w-8 h-8 mx-auto animate-spin text-[#0066FF]" />
-         <p className="text-gray-500 mt-4 font-medium">Loading financial ledger...</p>
+      <div className="flex items-center justify-center h-[400px]">
+        <Loader2 className="w-8 h-8 animate-spin text-[#0066FF]" />
       </div>
     );
   }
 
   return (
-    <div className="p-8 max-w-[1700px] mx-auto pb-24 space-y-8 font-sans">
-      
-      {/* HEADER & KPI CARDS */}
-      <div className="flex flex-col gap-6">
+    <div className="p-8 max-w-[1400px] mx-auto space-y-8">
+      {/* Header */}
+      <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-[#0F172A] tracking-tight">Financial Ledger</h1>
-          <p className="text-[#64748B] text-sm mt-1">Track all incoming payments, booking amounts, and pending dues</p>
+          <h1 className="text-2xl font-bold text-[#0F172A]">Financial Ledger</h1>
+          <p className="text-gray-500 text-sm mt-1">Track income, expenses, and profitability</p>
         </div>
-
-        <div className="grid gap-4 md:grid-cols-4">
-          {[
-            { label: "Total Revenue", value: formatCur(totalRevenue), icon: IndianRupee, color: "from-blue-600 to-blue-400", shadow: "shadow-blue-500/30" },
-            { label: "Pending Payments", value: formatCur(pendingPayments), icon: Clock, color: "from-amber-500 to-amber-400", shadow: "shadow-amber-500/30" },
-            { label: "Active Deals", value: activeDeals.toString(), icon: TrendingUp, color: "from-emerald-500 to-emerald-400", shadow: "shadow-emerald-500/30" },
-            { label: "Recent Txns", value: ledger.length > 50 ? "50+" : ledger.length.toString(), icon: Wallet, color: "from-purple-600 to-purple-400", shadow: "shadow-purple-500/30" },
-          ].map((kpi, i) => (
-            <Card 
-              key={i}
-              className="overflow-hidden bg-white border-[#E8ECF0] shadow-[0_2px_8px_rgba(0,0,0,0.04)] rounded-[16px] transition-all hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(0,0,0,0.08)] hover:border-[#CBD5E1]"
-            >
-              <CardContent className="p-4 flex items-center gap-4">
-                <div className={`h-12 w-12 rounded-[12px] bg-gradient-to-br ${kpi.color} flex items-center justify-center text-white shadow-md ${kpi.shadow} shrink-0`}>
-                  <kpi.icon className="h-6 w-6" />
-                </div>
-                <div>
-                  <h3 className="text-[20px] font-bold text-[#0F172A] leading-none">{kpi.value}</h3>
-                  <p className="text-[12px] font-bold text-[#64748B] uppercase tracking-[0.05em] mt-1">{kpi.label}</p>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <Button onClick={() => setAddOpen(true)} className="bg-[#0066FF] hover:bg-[#0052CC]">
+          <Plus className="w-4 h-4 mr-2" /> Log Expense
+        </Button>
       </div>
 
-      {/* FILTER BAR */}
-      <Card className="bg-white border-[#E8ECF0] shadow-[0_2px_8px_rgba(0,0,0,0.04)] rounded-[16px]">
-        <div className="p-4 flex flex-col md:flex-row gap-4 justify-between items-center">
-          <div className="flex-1 w-full flex flex-wrap gap-3">
-            <div className="relative w-full md:max-w-[240px]">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-              <Input 
-                 placeholder="Search by receipt or name..." 
-                 className="w-full pl-9 rounded-[10px] border-gray-200 bg-[#F8FAFC] focus:bg-white text-sm" 
-                 value={searchTerm}
-                 onChange={(e) => setSearchTerm(e.target.value)}
-              />
+      {/* KPI Cards */}
+      <div className="grid gap-4 md:grid-cols-4">
+        <Card className="bg-white border-gray-200 shadow-sm">
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
+              <IndianRupee className="h-6 w-6 text-green-600" />
             </div>
-            <Select defaultValue="all">
-              <SelectTrigger className="w-[140px] rounded-[10px] border-gray-200 bg-[#F8FAFC]">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="failed">Failed</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button variant="outline" className="rounded-[10px] border-gray-200 bg-white text-[#64748B]">
-              <Filter className="mr-2 h-4 w-4" /> Filter
-            </Button>
-          </div>
-          <div className="flex gap-2 w-full md:w-auto">
-            <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-              <DialogTrigger asChild>
-                <Button className="rounded-[10px] bg-[#0066FF] hover:bg-[#0052CC] text-white font-semibold shadow-md">
-                  <Plus className="mr-2 h-4 w-4" /> Record Payment
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[450px]">
-                <DialogHeader>
-                  <DialogTitle>Record New Payment</DialogTitle>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="space-y-2">
-                    <label className="text-[12px] font-bold text-[#64748B] uppercase tracking-[0.05em]">Lead / Customer</label>
-                    <Select value={formData.leadId} onValueChange={v => setFormData({...formData, leadId: v})}>
-                      <SelectTrigger className="w-full rounded-[10px] border-gray-200">
-                        <SelectValue placeholder="Select Customer..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {leads.map(l => (
-                          <SelectItem key={l.id} value={l.id}>{l.name} - {l.project_interest || 'General'}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[12px] font-bold text-[#64748B] uppercase tracking-[0.05em]">Amount (₹)</label>
-                    <Input type="number" required value={formData.amount} onChange={e => setFormData({...formData, amount: e.target.value})} placeholder="500000" className="rounded-[10px] border-gray-200" />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label className="text-[12px] font-bold text-[#64748B] uppercase tracking-[0.05em]">Transaction Type</label>
-                      <Select value={formData.type} onValueChange={v => setFormData({...formData, type: v})}>
-                        <SelectTrigger className="w-full rounded-[10px] border-gray-200">
-                          <SelectValue placeholder="Type..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Credit">Credit IN</SelectItem>
-                          <SelectItem value="Debit">Debit OUT</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-[12px] font-bold text-[#64748B] uppercase tracking-[0.05em]">Status</label>
-                      <Select value={formData.status} onValueChange={v => setFormData({...formData, status: v})}>
-                        <SelectTrigger className="w-full rounded-[10px] border-gray-200">
-                          <SelectValue placeholder="Status..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Completed">Completed</SelectItem>
-                          <SelectItem value="Pending">Pending</SelectItem>
-                          <SelectItem value="Failed">Failed</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[12px] font-bold text-[#64748B] uppercase tracking-[0.05em]">Receipt No (Optional)</label>
-                    <Input value={formData.receiptNo} onChange={e => setFormData({...formData, receiptNo: e.target.value})} placeholder="Auto-generated if left blank" className="rounded-[10px] border-gray-200" />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setShowAddDialog(false)} className="rounded-[10px] font-semibold">Cancel</Button>
-                  <Button onClick={addPayment} disabled={addingLoading} className="rounded-[10px] font-semibold bg-[#0066FF] hover:bg-[#0052CC] text-white">
-                    {addingLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null} Save Payment
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          </div>
-        </div>
-      </Card>
+            <div>
+              <h3 className="text-2xl font-bold">{formatCurrency(totalRevenue)}</h3>
+              <p className="text-xs text-gray-500 uppercase font-bold">Total Revenue</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-white border-gray-200 shadow-sm">
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="h-12 w-12 rounded-full bg-red-100 flex items-center justify-center">
+              <TrendingDown className="h-6 w-6 text-red-600" />
+            </div>
+            <div>
+              <h3 className="text-2xl font-bold">{formatCurrency(totalExpenses)}</h3>
+              <p className="text-xs text-gray-500 uppercase font-bold">Total Expenses</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-white border-gray-200 shadow-sm">
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">
+              <Wallet className="h-6 w-6 text-blue-600" />
+            </div>
+            <div>
+              <h3 className="text-2xl font-bold">{formatCurrency(netProfit)}</h3>
+              <p className="text-xs text-gray-500 uppercase font-bold">Net Profit</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-white border-gray-200 shadow-sm">
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="h-12 w-12 rounded-full bg-purple-100 flex items-center justify-center">
+              <TrendingUp className="h-6 w-6 text-purple-600" />
+            </div>
+            <div>
+              <h3 className="text-2xl font-bold">{profitMargin.toFixed(1)}%</h3>
+              <p className="text-xs text-gray-500 uppercase font-bold">Profit Margin</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
-      {/* LEDGER TABLE */}
-      {filteredLedger.length === 0 ? (
-        <div className="text-center py-20 bg-white rounded-2xl border border-gray-100 shadow-sm">
-          <Wallet className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-lg font-bold text-gray-900">No transactions found</h3>
-          <p className="text-gray-500 mb-6">Record your first payment to see it here.</p>
+      {/* Filters & Export */}
+      <div className="flex flex-col lg:flex-row gap-4 justify-between items-start lg:items-center">
+        <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+            <Input
+              placeholder="Search category, description..."
+              className="pl-9"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <Select value={typeFilter} onValueChange={setTypeFilter}>
+            <SelectTrigger className="w-[130px]">
+              <SelectValue placeholder="Type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Types</SelectItem>
+              <SelectItem value="Income">Income</SelectItem>
+              <SelectItem value="Expense">Expense</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[130px]">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="Approved">Approved</SelectItem>
+              <SelectItem value="Pending">Pending</SelectItem>
+              <SelectItem value="Failed">Failed</SelectItem>
+            </SelectContent>
+          </Select>
+          <Input
+            type="date"
+            placeholder="From"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+            className="w-[140px]"
+          />
+          <Input
+            type="date"
+            placeholder="To"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+            className="w-[140px]"
+          />
         </div>
-      ) : (
-      <Card className="bg-white border-[#E8ECF0] shadow-[0_2px_8px_rgba(0,0,0,0.04)] rounded-[16px] overflow-hidden">
+        <Button variant="outline" onClick={exportCSV}>
+          <Download className="w-4 h-4 mr-2" /> Export CSV
+        </Button>
+      </div>
+
+      {/* Ledger Table */}
+      <Card className="bg-white border-gray-200 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <Table>
-            <TableHeader className="bg-[#F8FAFC] border-b border-gray-200">
-              <TableRow className="hover:bg-transparent border-none">
-                <TableHead className="text-[12px] font-semibold text-[#64748B] uppercase tracking-[0.05em] py-4 pl-6">Receipt No</TableHead>
-                <TableHead className="text-[12px] font-semibold text-[#64748B] uppercase tracking-[0.05em]">Date</TableHead>
-                <TableHead className="text-[12px] font-semibold text-[#64748B] uppercase tracking-[0.05em]">Customer</TableHead>
-                <TableHead className="text-[12px] font-semibold text-[#64748B] uppercase tracking-[0.05em]">Project</TableHead>
-                <TableHead className="text-[12px] font-semibold text-[#64748B] uppercase tracking-[0.05em]">Type</TableHead>
-                <TableHead className="text-[12px] font-semibold text-[#64748B] uppercase tracking-[0.05em]">Status</TableHead>
-                <TableHead className="text-right pr-6 text-[12px] font-semibold text-[#64748B] uppercase tracking-[0.05em]">Amount (₹)</TableHead>
+            <TableHeader className="bg-[#F8FAFC]">
+              <TableRow>
+                <TableHead>Date</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Category</TableHead>
+                <TableHead>Description</TableHead>
+                <TableHead className="text-right">Amount</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Logged By</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredLedger.map((txn, index) => {
-                const style = getStatusStyle(txn.status);
-                const Icon = style.icon;
-                const dateStr = new Date(txn.transaction_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-                const isCredit = txn.type === 'Credit';
-                
-                return (
-                  <TableRow key={txn.id} className="group hover:bg-[#F0F4F8]/60 transition-colors border-b border-gray-100 bg-white">
-                    <TableCell className="pl-6 py-4">
-                      <div className="font-bold text-[#0F172A] text-[13px]">{txn.receipt_no}</div>
-                      <div className="text-[11px] text-gray-400 font-medium">Txn ID: {(txn.id || '').substring(0,8)}...</div>
-                    </TableCell>
+              {filteredLedger.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                    No transactions found.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredLedger.map((entry) => (
+                  <TableRow key={entry.id}>
+                    <TableCell>{new Date(entry.transaction_date).toLocaleDateString()}</TableCell>
                     <TableCell>
-                      <div className="text-[13px] text-[#64748B] font-medium">{dateStr}</div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="font-bold text-[#0F172A] text-[14px]">{txn.lead?.name || 'Unknown'}</div>
-                      <div className="text-[11px] text-gray-400 font-medium">{txn.lead?.phone || 'N/A'}</div>
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-[13px] font-medium text-[#0F172A]">{txn.lead?.project_interest || 'General'}</span>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1.5 font-medium text-[13px]">
-                         {isCredit ? (
-                           <ArrowDownRight className="w-4 h-4 text-emerald-500" />
-                         ) : (
-                           <ArrowUpRight className="w-4 h-4 text-red-500" />
-                         )}
-                         <span className={isCredit ? 'text-emerald-600' : 'text-red-600'}>
-                           {txn.type}
-                         </span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={`${style.bg} ${style.text} shadow-none text-[11px] rounded-full font-bold uppercase tracking-wide px-2.5 flex items-center gap-1 w-fit`}>
-                        <Icon className="w-3 h-3" /> {txn.status}
+                      <Badge
+                        variant={entry.transaction_type === "Income" ? "default" : "destructive"}
+                        className={
+                          entry.transaction_type === "Income"
+                            ? "bg-green-100 text-green-700"
+                            : "bg-red-100 text-red-700"
+                        }
+                      >
+                        {entry.transaction_type}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right pr-6">
-                      <div className={`font-bold text-[15px] ${isCredit ? 'text-emerald-600' : 'text-red-600'}`}>
-                        {isCredit ? '+' : '-'}{formatCur(txn.amount)}
-                      </div>
+                    <TableCell>{entry.category}</TableCell>
+                    <TableCell className="max-w-[300px] truncate">{entry.description || "—"}</TableCell>
+                    <TableCell className="text-right font-semibold">
+                      {formatCurrency(entry.amount)}
                     </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant="outline"
+                        className={
+                          entry.status === "Approved"
+                            ? "bg-green-50 text-green-700 border-green-200"
+                            : entry.status === "Pending"
+                            ? "bg-amber-50 text-amber-700 border-amber-200"
+                            : "bg-red-50 text-red-700 border-red-200"
+                        }
+                      >
+                        {entry.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{entry.logged_by?.name || "System"}</TableCell>
                   </TableRow>
-                )
-              })}
+                ))
+              )}
             </TableBody>
           </Table>
         </div>
       </Card>
-      )}
 
+      {/* Log Expense Dialog */}
+      <Dialog open={addOpen} onOpenChange={setAddOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Log New Expense</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label>Category</Label>
+              <Select value={formData.category} onValueChange={(v) => setFormData({ ...formData, category: v })}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Marketing">Marketing</SelectItem>
+                  <SelectItem value="Operations">Operations</SelectItem>
+                  <SelectItem value="Construction">Construction</SelectItem>
+                  <SelectItem value="Salaries">Salaries</SelectItem>
+                  <SelectItem value="Other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label>Amount (₹)</Label>
+              <Input
+                type="number"
+                placeholder="e.g., 50000"
+                value={formData.amount}
+                onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                required
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label>Transaction Date</Label>
+              <Input
+                type="date"
+                value={formData.transaction_date}
+                onChange={(e) => setFormData({ ...formData, transaction_date: e.target.value })}
+                required
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label>Description (Optional)</Label>
+              <Input
+                placeholder="Brief description"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label>Status</Label>
+              <Select value={formData.status} onValueChange={(v) => setFormData({ ...formData, status: v })}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Approved">Approved</SelectItem>
+                  <SelectItem value="Pending">Pending</SelectItem>
+                  <SelectItem value="Failed">Failed</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleAddExpense} disabled={adding}>
+              {adding && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Log Expense
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
-  )
+  );
 }

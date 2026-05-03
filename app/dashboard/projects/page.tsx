@@ -8,6 +8,7 @@ import { Progress } from "@/components/ui/progress"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 
 import { getProjects } from "@/lib/data"
+import { EmptyState } from "@/components/ui/empty-state";
 
 // --- HELPERS ---
 const SectionHeading = ({ title }: { title: string }) => (

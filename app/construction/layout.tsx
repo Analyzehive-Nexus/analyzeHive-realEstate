@@ -2,6 +2,7 @@ import { ReactNode } from "react"
 import { ConstructionSidebar } from "./components/construction-sidebar"
 import { Bell, Plus, Search, HelpCircle, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { ModuleSwitcher } from "@/components/shared/ModuleSwitcher"
 
 export default function ConstructionLayout({ children }: { children: ReactNode }) {
   const user = { firstName: "Demo", lastName: "Mode", role: "SITE MANAGER" }
@@ -49,6 +50,7 @@ export default function ConstructionLayout({ children }: { children: ReactNode }
 
           {/* Right Actions */}
           <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+            <ModuleSwitcher />
             <Button className="bg-[#F59E0B] hover:bg-[#D97706] text-white font-semibold px-4 py-2 rounded-[10px] text-sm shadow-md transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 gap-2 hidden sm:flex h-9">
               <Plus className="h-4 w-4" />
               <span className="tracking-wide">Raise Request</span>

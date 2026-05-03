@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { EmptyState } from "@/components/ui/empty-state";
 
 // --- HELPERS ---
 const SectionHeading = ({ title }: { title: string }) => (
@@ -56,6 +57,20 @@ export default function ReportsPage() {
   const [activeCat, setActiveCat] = useState("All");
   const filteredReports = activeCat === "All" ? reports : reports.filter(r => r.type === activeCat);
 
+  const exportCSV = () => {
+    const rows = filteredReports.map((r) => [r.name, r.type, r.period, r.date, r.size]);
+    const csv = [["Report Name", "Type", "Period", "Date", "Size"], ...rows]
+      .map(row => row.join(","))
+      .join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `financial_reports_${activeCat}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="p-8 max-w-[1800px] mx-auto pb-24 space-y-10 font-sans text-[#0F172A]">
       
@@ -67,6 +82,9 @@ export default function ReportsPage() {
         </div>
         
         <div className="flex items-center gap-2">
+           <Button variant="outline" onClick={exportCSV} className="text-slate-600 border-[#E8ECF0] hover:bg-slate-50 font-semibold rounded-[10px] px-4 h-10 shadow-sm gap-2">
+              <Download className="w-4 h-4" /> Export CSV
+           </Button>
            <Button className="bg-[#0066FF] hover:bg-blue-700 text-white font-semibold rounded-[10px] px-6 h-10 shadow-md">
               <Calendar className="w-4 h-4 mr-2" /> Schedule New
            </Button>

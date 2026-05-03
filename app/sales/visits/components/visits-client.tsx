@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input"
 import { useToast } from "@/components/ui/toast"
 import { scheduleVisitAction, updateVisitStatusAction } from "../actions"
 import { Calendar as CalendarIcon, List, Plus } from "lucide-react"
+import { EmptyState } from "@/components/ui/empty-state";
 
 type Visit = {
   visit_id: string

@@ -1,17 +1,26 @@
 import { supabaseAdmin } from './supabase';
+import { getSessionUser, SessionUser } from './session';
 
 // ==========================================
 // SALES FUNCTIONS
 // ==========================================
 
-export async function getLeads() {
-  const { data, error } = await supabaseAdmin
+export async function getLeads(session?: SessionUser) {
+  const sessionUser = session || await getSessionUser();
+  if (!sessionUser) return [];
+
+  let query = supabaseAdmin
     .from('leads_customers')
     .select(`
       *,
       assigned_user:users(id, name, avatar_initials)
-    `)
-    .order('created_at', { ascending: false });
+    `);
+
+  if (sessionUser.role === 'BROKER') {
+    query = query.eq('assigned_user_id', sessionUser.id);
+  }
+
+  const { data, error } = await query.order('created_at', { ascending: false });
   if (error) { console.error(error); return []; }
   return data;
 }
@@ -201,10 +210,24 @@ export async function getBrokers() {
 // CONSTRUCTION FUNCTIONS
 // ==========================================
 
-export async function getInventoryItems() {
-  const { data, error } = await supabaseAdmin
+export async function getInventoryItems(session?: SessionUser) {
+  const sessionUser = session || await getSessionUser();
+  if (!sessionUser) return [];
+
+  let query = supabaseAdmin
     .from('inventory_items')
-    .select('*')
+    .select('*');
+
+  if (sessionUser.role === 'SITE_MANAGER') {
+    const { data: user } = await supabaseAdmin.from('users').select('project_id').eq('id', sessionUser.id).single();
+    if (user?.project_id) {
+      query = query.eq('project_id', user.project_id);
+    } else {
+      return []; // Return empty if no project is assigned
+    }
+  }
+
+  const { data, error } = await query
     .order('category')
     .order('name');
   if (error) { console.error(error); return []; }

@@ -14,12 +14,14 @@ import {
 } from "recharts"
 
 // --- HELPERS ---
-const SectionHeading = ({ title }: { title: string }) => (
+const SectionHeading = ({ title, onExport }: { title: string, onExport?: () => void }) => (
   <div className="flex items-center justify-between mb-4">
     <h2 className="text-lg font-semibold text-[#0F172A] tracking-tight">{title}</h2>
-    <Button variant="ghost" className="text-[#0066FF] font-semibold hover:bg-blue-50 rounded-[10px] h-8 px-3 text-[13px] gap-2">
-      <Download className="w-4 h-4" /> Export Data
-    </Button>
+    {onExport && (
+      <Button variant="ghost" onClick={onExport} className="text-[#0066FF] font-semibold hover:bg-blue-50 rounded-[10px] h-8 px-3 text-[13px] gap-2">
+        <Download className="w-4 h-4" /> Export Data
+      </Button>
+    )}
   </div>
 );
 
@@ -79,6 +81,20 @@ const pipelineMovement = [
 
 export default function SalesPerformancePage() {
   const [period, setPeriod] = useState("This Month");
+
+  const exportCSV = () => {
+    const rows = brokerLeaderboard.map((b) => [b.name, b.leads, b.conv, b.rev]);
+    const csv = [["Broker", "Leads", "Conversions", "Revenue"], ...rows]
+      .map(row => row.join(","))
+      .join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `broker_leaderboard_${period}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="p-8 max-w-[1800px] mx-auto pb-24 space-y-10 font-sans text-[#0F172A]">
@@ -175,7 +191,7 @@ export default function SalesPerformancePage() {
 
       {/* SECTION 3: BROKER PERFORMANCE */}
       <section>
-        <SectionHeading title="Top Performing Brokers / Agents" />
+        <SectionHeading title="Top Performing Brokers / Agents" onExport={exportCSV} />
         <PearlCard>
           <Table>
              <TableHeader className="bg-[#FAFBFC] border-b border-[#E8ECF0]">

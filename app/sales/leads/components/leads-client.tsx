@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet"
 import { useToast } from "@/components/ui/toast"
 import { Search, Plus } from "lucide-react"
+import { EmptyState } from "@/components/ui/empty-state";
 
 type Lead = {
   id: string

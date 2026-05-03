@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/toast";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { createDemandRequest } from "./actions";
+import { EmptyState } from "@/components/ui/empty-state";
 
 export default function ManagerView({ stockItems, requests }: { stockItems: any[], requests: any[] }) {
   const { toast } = useToast();

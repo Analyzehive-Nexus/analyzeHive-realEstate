@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/components/ui/toast"
 import { updateFlatStatusAction } from "../actions"
+import { EmptyState } from "@/components/ui/empty-state";
 
 type Flat = {
   flat_id: string
