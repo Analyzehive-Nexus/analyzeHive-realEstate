@@ -1,4 +1,6 @@
-"use client"
+"use client";
+import { ResponsiveTable } from "@/components/ui/responsive-table";
+
 
 import { useState } from "react"
 import { 
@@ -80,7 +82,7 @@ export default function DemandsClient({ initialDemands }: { initialDemands: any[
       </div>
 
       {/* KPI CARDS */}
-      <section className="grid gap-6 md:grid-cols-4">
+      <section className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         <InteractivePearlCard className="p-5">
           <CardContent className="p-0 flex flex-col justify-center">
             <p className="text-[12px] font-semibold text-[#64748B] uppercase tracking-[0.05em] mb-1">Total Requests</p>
@@ -125,9 +127,9 @@ export default function DemandsClient({ initialDemands }: { initialDemands: any[
               <Button variant="ghost" onClick={() => setIsRaiseFormOpen(false)} className="text-slate-500 hover:bg-slate-100 rounded-[8px]">Cancel</Button>
            </div>
            
-           <div className="grid md:grid-cols-3 gap-6">
+           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               <div className="space-y-4 col-span-2">
-                 <div className="grid grid-cols-2 gap-4">
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                    <div className="space-y-2">
                      <Label className="font-semibold text-slate-700">Material Required</Label>
                      <Select>
@@ -207,7 +209,8 @@ export default function DemandsClient({ initialDemands }: { initialDemands: any[
       {/* REQUESTS TABLE */}
       <section>
         <PearlCard>
-          <Table>
+          <ResponsiveTable>
+<Table>
             <TableHeader className="bg-[#FAFBFC] border-b border-[#E8ECF0]">
               <TableRow className="hover:bg-transparent border-none">
                 <TableHead className="font-semibold text-xs text-[#64748B] uppercase py-4">Request Details</TableHead>
@@ -264,7 +267,7 @@ export default function DemandsClient({ initialDemands }: { initialDemands: any[
                                   </div>
                                   <StatusBadge s={selectedReq.status} r={selectedReq.reviewer} />
                                 </div>
-                                <div className="grid grid-cols-2 gap-4 mt-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
                                   <div className="bg-white p-3 rounded-[10px] border border-[#E8ECF0] shadow-sm">
                                     <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">Material Requested</p>
                                     <p className="font-bold text-[15px]">{selectedReq.material}</p>
@@ -317,6 +320,7 @@ export default function DemandsClient({ initialDemands }: { initialDemands: any[
               ))}
             </TableBody>
           </Table>
+</ResponsiveTable>
         </PearlCard>
       </section>
 

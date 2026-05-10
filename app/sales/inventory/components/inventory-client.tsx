@@ -148,7 +148,7 @@ export function InventoryClient({ initialData }: { initialData: Flat[] }) {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 gap-y-4 gap-x-2 text-sm mt-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-2 text-sm mt-2">
                 <div className="flex flex-col">
                   <span className="text-slate-500 text-xs text-muted-foreground">Type</span>
                   <span className="font-medium">{flat.type}</span>

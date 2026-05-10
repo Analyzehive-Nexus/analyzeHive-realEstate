@@ -1,4 +1,6 @@
-"use client"
+"use client";
+import { ResponsiveTable } from "@/components/ui/responsive-table";
+
 
 import { useState } from "react"
 import { 
@@ -89,7 +91,7 @@ export default function AssetsClient({ initialAssets }: { initialAssets: any[] }
       </div>
 
       {/* KPI CARDS */}
-      <section className="grid gap-6 md:grid-cols-4">
+      <section className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         <InteractivePearlCard className="p-5">
           <CardContent className="p-0 flex flex-col justify-center">
             <p className="text-[12px] font-semibold text-[#64748B] uppercase tracking-[0.05em] mb-1">Total Assets</p>
@@ -166,7 +168,7 @@ export default function AssetsClient({ initialAssets }: { initialAssets: any[] }
                 <DialogTitle>Register New Asset</DialogTitle>
               </DialogHeader>
               <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Asset Name</Label>
                     <Input placeholder="e.g. Concrete Pump" className="rounded-[8px]" />
@@ -236,7 +238,7 @@ export default function AssetsClient({ initialAssets }: { initialAssets: any[] }
                  
                  <h3 className="text-[17px] font-bold text-[#0F172A] leading-tight mb-4">{ast.name}</h3>
                  
-                 <div className="grid grid-cols-2 gap-y-3 gap-x-2 mt-auto text-[13px]">
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-y-3 gap-x-2 mt-auto text-[13px]">
                     <div>
                       <span className="flex items-center gap-1.5 text-slate-500 text-[11px] uppercase font-bold tracking-wider mb-1"><MapPin className="w-3 h-3 text-slate-400"/> Location</span>
                       <span className="font-semibold text-[#0F172A]">{ast.location}</span>
@@ -338,7 +340,8 @@ export default function AssetsClient({ initialAssets }: { initialAssets: any[] }
         </div>
       ) : (
         <PearlCard>
-          <Table>
+          <ResponsiveTable>
+<Table>
             <TableHeader className="bg-[#FAFBFC] border-b border-[#E8ECF0]">
               <TableRow className="hover:bg-transparent border-none">
                 <TableHead className="font-semibold text-xs text-[#64748B] uppercase py-4">Asset Details</TableHead>
@@ -379,6 +382,7 @@ export default function AssetsClient({ initialAssets }: { initialAssets: any[] }
               ))}
             </TableBody>
           </Table>
+</ResponsiveTable>
         </PearlCard>
       )}
 

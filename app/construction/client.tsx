@@ -1,5 +1,7 @@
 import { EmptyState } from "@/components/ui/empty-state";
-"use client"
+"use client";
+import { ResponsiveTable } from "@/components/ui/responsive-table";
+
 
 import { 
   Package, ClipboardList, Truck, HardHat, AlertTriangle, Phone, Star, Camera, CheckCircle, XCircle 
@@ -209,7 +211,8 @@ export default function ConstructionClient({
         <div className="lg:col-span-3">
           <SectionHeading title="Material Stock" />
           <PearlCard>
-            <Table>
+            <ResponsiveTable>
+<Table>
               <TableHeader className="bg-[#FAFBFC] border-b border-[#E8ECF0]">
                 <TableRow className="hover:bg-transparent border-none">
                   <TableHead className="font-semibold text-xs text-[#64748B] uppercase">Material Name</TableHead>
@@ -251,6 +254,7 @@ export default function ConstructionClient({
                 )}
               </TableBody>
             </Table>
+</ResponsiveTable>
           </PearlCard>
         </div>
 
@@ -302,7 +306,8 @@ export default function ConstructionClient({
           <h2 className="text-lg font-semibold text-[#0F172A] tracking-tight">Material Demand Requests</h2>
         </div>
         <PearlCard>
-          <Table>
+          <ResponsiveTable>
+<Table>
             <TableHeader className="bg-[#FAFBFC] border-b border-[#E8ECF0]">
               <TableRow className="hover:bg-transparent border-none">
                 <TableHead className="font-semibold text-xs text-[#64748B] uppercase">Request ID</TableHead>
@@ -348,6 +353,7 @@ export default function ConstructionClient({
               )}
             </TableBody>
           </Table>
+</ResponsiveTable>
         </PearlCard>
       </section>
 
@@ -384,7 +390,7 @@ export default function ConstructionClient({
       </section>
 
       {/* SECTION 5 - DAILY PROGRESS REPORTS */}
-      <section className="grid lg:grid-cols-2 gap-8">
+      <section className="grid lg:grid-cols-1 md:grid-cols-2 gap-8">
         <div className="flex flex-col">
           <SectionHeading title="Daily Progress Reports" />
           <PearlCard className="flex-1">
@@ -439,7 +445,7 @@ export default function ConstructionClient({
       </section>
 
       {/* SECTION 6 - LABOUR ATTENDANCE */}
-      <section className="grid lg:grid-cols-2 gap-8">
+      <section className="grid lg:grid-cols-1 md:grid-cols-2 gap-8">
         <div className="flex flex-col">
           <SectionHeading title="Today's Labour Attendance" />
           <PearlCard className="flex-1 p-6 flex items-center gap-8">
@@ -455,7 +461,8 @@ export default function ConstructionClient({
                </div>
             </div>
             <div className="flex-1">
-              <Table>
+              <ResponsiveTable>
+<Table>
                 <TableBody>
                   {labourTable.map((l: any, i: number) => (
                     <TableRow key={i} className="hover:bg-transparent border-b border-[#E8ECF0]/60">
@@ -471,6 +478,7 @@ export default function ConstructionClient({
                   {labourTable.length === 0 && <TableRow><TableCell colSpan={3} className="text-center py-4 text-gray-500">No attendance data</TableCell></TableRow>}
                 </TableBody>
               </Table>
+</ResponsiveTable>
             </div>
           </PearlCard>
         </div>
@@ -501,7 +509,8 @@ export default function ConstructionClient({
       <section>
         <SectionHeading title="Active Vendor Relationships" />
         <PearlCard>
-          <Table>
+          <ResponsiveTable>
+<Table>
             <TableHeader className="bg-[#FAFBFC] border-b border-[#E8ECF0]">
               <TableRow className="hover:bg-transparent border-none">
                 <TableHead className="font-semibold text-xs text-[#64748B] uppercase">Vendor Name</TableHead>
@@ -547,13 +556,14 @@ export default function ConstructionClient({
               {(!vendors || vendors.length === 0) && <TableRow><TableCell colSpan={6} className="text-center py-6 text-gray-500">No vendors found</TableCell></TableRow>}
             </TableBody>
           </Table>
+</ResponsiveTable>
         </PearlCard>
       </section>
 
       {/* SECTION 8 - SITE PHOTOS */}
       <section>
         <SectionHeading title="Recent Site Photos" />
-        <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-6">
+        <div className="grid sm:grid-cols-2 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {photos.map((p, i) => (
              <InteractivePearlCard key={i} className="p-0 border-none">
                <div className={`h-40 w-full ${p.color} relative flex items-center justify-center`}>
@@ -569,11 +579,12 @@ export default function ConstructionClient({
       </section>
 
       {/* SECTION 9 - BUDGET VS ACTUAL SPENDING */}
-      <section className="grid lg:grid-cols-2 gap-8 pb-10">
+      <section className="grid lg:grid-cols-1 md:grid-cols-2 gap-8 pb-10">
         <div className="flex flex-col">
           <SectionHeading title="Budget Allocation Tracker" />
           <PearlCard className="flex-1">
-             <Table>
+             <ResponsiveTable>
+<Table>
                <TableHeader className="bg-[#FAFBFC] border-b border-[#E8ECF0]">
                  <TableRow className="hover:bg-transparent border-none">
                    <TableHead className="text-xs text-[#64748B] uppercase py-3">Category Details</TableHead>
@@ -601,6 +612,7 @@ export default function ConstructionClient({
                  ))}
                </TableBody>
              </Table>
+</ResponsiveTable>
           </PearlCard>
         </div>
 

@@ -212,7 +212,7 @@ export default function ReportsPage() {
                      </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                      <div>
                         <Label className="text-[13px] font-bold text-slate-700">Format</Label>
                         <select className="w-full mt-1.5 h-10 bg-slate-50 border border-[#E8ECF0] rounded-[8px] px-3 text-[14px] font-medium text-slate-700 focus:outline-none focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF]">

@@ -1,4 +1,6 @@
 "use client";
+import { ResponsiveTable } from "@/components/ui/responsive-table";
+
 
 import { useState } from "react";
 import { format } from "date-fns";
@@ -89,7 +91,8 @@ export default function ManagerView({ stockItems, requests }: { stockItems: any[
       <div className="space-y-4">
         <h2 className="text-xl font-semibold text-slate-800 dark:text-slate-200">My Recent Requests</h2>
         <div className="rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
-          <Table>
+          <ResponsiveTable>
+<Table>
             <TableHeader className="bg-slate-50 dark:bg-slate-950">
               <TableRow>
                 <TableHead>Date</TableHead>
@@ -127,6 +130,7 @@ export default function ManagerView({ stockItems, requests }: { stockItems: any[
               ))}
             </TableBody>
           </Table>
+</ResponsiveTable>
         </div>
       </div>
     </div>

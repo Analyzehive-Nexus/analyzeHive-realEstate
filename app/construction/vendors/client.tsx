@@ -1,4 +1,6 @@
-"use client"
+"use client";
+import { ResponsiveTable } from "@/components/ui/responsive-table";
+
 
 import { useState } from "react"
 import { 
@@ -81,7 +83,7 @@ export default function VendorsClient({ initialVendors }: { initialVendors: any[
       </div>
 
       {/* KPI CARDS */}
-      <section className="grid gap-6 md:grid-cols-4">
+      <section className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         <InteractivePearlCard className="p-5">
           <CardContent className="p-0 flex flex-col justify-center">
             <p className="text-[12px] font-semibold text-[#64748B] uppercase tracking-[0.05em] mb-1">Total Vendors</p>
@@ -161,7 +163,8 @@ export default function VendorsClient({ initialVendors }: { initialVendors: any[
       {/* VENDORS FULL TABLE */}
       <section>
         <PearlCard>
-          <Table>
+          <ResponsiveTable>
+<Table>
             <TableHeader className="bg-[#FAFBFC] border-b border-[#E8ECF0]">
               <TableRow className="hover:bg-transparent border-none">
                 <TableHead className="font-semibold text-xs text-[#64748B] uppercase py-4">Vendor Info</TableHead>
@@ -228,7 +231,7 @@ export default function VendorsClient({ initialVendors }: { initialVendors: any[
                          
                          <div className="space-y-6">
                            {/* Quick Contacts */}
-                           <div className="grid grid-cols-2 gap-3 mb-6">
+                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
                               <div className="bg-slate-50 p-3 rounded-[10px] border border-[#E8ECF0] flex gap-3 items-center">
                                  <div className="w-8 h-8 rounded-full bg-blue-100 text-[#0066FF] flex items-center justify-center shrink-0"><Phone className="w-4 h-4"/></div>
                                  <div className="overflow-hidden">
@@ -261,7 +264,8 @@ export default function VendorsClient({ initialVendors }: { initialVendors: any[
                                <Button variant="outline" size="sm" className="h-7 text-[10px] rounded-[6px] text-[#0066FF] border-[#E8ECF0] hover:bg-blue-50 font-bold px-2">View All</Button>
                              </div>
                              <div className="border border-[#E8ECF0] rounded-[10px] bg-white overflow-hidden shadow-sm">
-                                <Table>
+                                <ResponsiveTable>
+<Table>
                                   <TableHeader className="bg-slate-50"><TableRow className="border-none"><TableHead className="py-2 text-[10px]">PO #</TableHead><TableHead className="py-2 text-[10px]">Items</TableHead><TableHead className="py-2 text-[10px] text-right">Amount</TableHead></TableRow></TableHeader>
                                   <TableBody>
                                     {OrderHistory.map((o, ix) => (
@@ -269,6 +273,7 @@ export default function VendorsClient({ initialVendors }: { initialVendors: any[
                                     ))}
                                   </TableBody>
                                 </Table>
+</ResponsiveTable>
                              </div>
 
                              <div className="flex justify-between items-center mb-2 mt-6">
@@ -276,7 +281,8 @@ export default function VendorsClient({ initialVendors }: { initialVendors: any[
                                <Button variant="outline" size="sm" className="h-7 text-[10px] rounded-[6px] text-slate-500 border-[#E8ECF0] hover:bg-slate-50 font-bold px-2">View All</Button>
                              </div>
                              <div className="border border-[#E8ECF0] rounded-[10px] bg-white overflow-hidden shadow-sm">
-                                <Table>
+                                <ResponsiveTable>
+<Table>
                                   <TableHeader className="bg-slate-50"><TableRow className="border-none"><TableHead className="py-2 text-[10px]">Date</TableHead><TableHead className="py-2 text-[10px]">Reference</TableHead><TableHead className="py-2 text-[10px] text-right">Amount</TableHead></TableRow></TableHeader>
                                   <TableBody>
                                     {PaymentHistory.map((p, ix) => (
@@ -284,6 +290,7 @@ export default function VendorsClient({ initialVendors }: { initialVendors: any[
                                     ))}
                                   </TableBody>
                                 </Table>
+</ResponsiveTable>
                              </div>
                            </div>
 
@@ -327,7 +334,7 @@ export default function VendorsClient({ initialVendors }: { initialVendors: any[
                                  </div>
                                </div>
 
-                               <div className="grid grid-cols-2 gap-4">
+                               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                   <div className="space-y-2">
                                     <Label className="font-semibold text-slate-700">Expected Delivery Date</Label>
                                     <Input type="date" className="h-10 rounded-[8px]" />
@@ -368,6 +375,7 @@ export default function VendorsClient({ initialVendors }: { initialVendors: any[
               ))}
             </TableBody>
           </Table>
+</ResponsiveTable>
         </PearlCard>
       </section>
 

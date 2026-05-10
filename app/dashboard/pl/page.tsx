@@ -1,4 +1,6 @@
 "use client";
+import { ResponsiveTable } from "@/components/ui/responsive-table";
+
 
 import { useState, useEffect } from "react";
 import { getPnLData, Period, PnLData } from "./actions";
@@ -121,7 +123,7 @@ export default function ProfitLossPage() {
       )}
 
       {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-5">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 lg:grid-cols-5">
         <Card className="bg-white border-gray-200">
           <CardContent className="p-4">
             <p className="text-sm text-gray-500 uppercase font-bold">Total Income</p>
@@ -163,7 +165,8 @@ export default function ProfitLossPage() {
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
-            <Table>
+            <ResponsiveTable>
+<Table>
               <TableHeader className="bg-[#F8FAFC]">
                 <TableRow>
                   <TableHead>Date</TableHead>
@@ -206,6 +209,7 @@ export default function ProfitLossPage() {
                 )}
               </TableBody>
             </Table>
+</ResponsiveTable>
           </div>
         </CardContent>
       </Card>

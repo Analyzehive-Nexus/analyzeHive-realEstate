@@ -1,4 +1,6 @@
 "use client";
+import { ResponsiveTable } from "@/components/ui/responsive-table";
+
 
 import { useState } from "react";
 import { format } from "date-fns";
@@ -135,7 +137,7 @@ export default function FinancialsClient({ expenses, payments, leads, flats, pie
                     <DialogTitle>Log New Expense</DialogTitle>
                   </DialogHeader>
                   <form action={handleLogExpense} className="space-y-4 pt-4">
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="grid gap-2">
                         <Label>Category</Label>
                         <Select name="category" required defaultValue="Operations">
@@ -171,7 +173,8 @@ export default function FinancialsClient({ expenses, payments, leads, flats, pie
             </div>
             
             <div className="p-0 overflow-auto max-h-[250px] flex-1">
-              <Table>
+              <ResponsiveTable>
+<Table>
                 <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
                   <TableRow>
                     <TableHead>Date</TableHead>
@@ -193,6 +196,7 @@ export default function FinancialsClient({ expenses, payments, leads, flats, pie
                   ))}
                 </TableBody>
               </Table>
+</ResponsiveTable>
             </div>
           </Card>
         </div>
@@ -233,7 +237,7 @@ export default function FinancialsClient({ expenses, payments, leads, flats, pie
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="grid gap-2">
                     <Label>Amount Received (₹)</Label>
                     <Input type="number" name="amount" required min="1" placeholder="e.g. 500000" />
@@ -252,7 +256,8 @@ export default function FinancialsClient({ expenses, payments, leads, flats, pie
         </div>
         
         <div className="p-0 overflow-auto max-h-[400px]">
-          <Table>
+          <ResponsiveTable>
+<Table>
             <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
               <TableRow>
                 <TableHead>Date</TableHead>
@@ -280,6 +285,7 @@ export default function FinancialsClient({ expenses, payments, leads, flats, pie
               ))}
             </TableBody>
           </Table>
+</ResponsiveTable>
         </div>
       </Card>
       

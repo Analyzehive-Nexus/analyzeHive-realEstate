@@ -1,4 +1,6 @@
 "use client";
+import { ResponsiveTable } from "@/components/ui/responsive-table";
+
 
 import { useState } from "react";
 import { format } from "date-fns";
@@ -106,7 +108,7 @@ export default function StockClient({ items }: { items: StockItem[] }) {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="grid gap-2">
                   <Label htmlFor="quantity">Initial Quantity</Label>
                   <Input id="quantity" name="quantity" type="number" step="0.01" min="0" defaultValue="0" required />
@@ -125,7 +127,8 @@ export default function StockClient({ items }: { items: StockItem[] }) {
       </div>
 
       <div className="rounded-md border border-slate-200 dark:border-slate-800 overflow-hidden bg-white dark:bg-slate-900 shadow-sm">
-        <Table>
+        <ResponsiveTable>
+<Table>
           <TableHeader className="bg-slate-50 dark:bg-slate-950">
             <TableRow>
               <TableHead>Item Name</TableHead>
@@ -182,7 +185,7 @@ export default function StockClient({ items }: { items: StockItem[] }) {
                         </DialogHeader>
                         <form action={handleRestock} className="space-y-4 pt-4">
                           <input type="hidden" name="item_id" value={item.item_id} />
-                          <div className="bg-slate-50 dark:bg-slate-900 p-3 rounded grid grid-cols-2 text-sm gap-2">
+                          <div className="bg-slate-50 dark:bg-slate-900 p-3 rounded grid grid-cols-1 md:grid-cols-2 text-sm gap-2">
                             <div className="text-slate-500">Item Name:</div>
                             <div className="font-medium text-right">{item.name}</div>
                             <div className="text-slate-500">Current Stock:</div>
@@ -205,6 +208,7 @@ export default function StockClient({ items }: { items: StockItem[] }) {
             })}
           </TableBody>
         </Table>
+</ResponsiveTable>
       </div>
     </div>
   );

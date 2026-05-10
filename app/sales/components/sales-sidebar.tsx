@@ -118,7 +118,7 @@ export function SalesSidebar({ user }: { user: any }) {
             </span>
           </div>
         </div>
-        <Link href="/settings/profile" className="ml-auto text-slate-400 hover:text-white transition-colors">
+        <Link href="/settings/profile" className="ml-auto text-slate-400 hover:text-white transition-colors shrink-0">
           <Settings className="h-4 w-4" />
         </Link>
       </div>

@@ -1,4 +1,6 @@
-"use client"
+"use client";
+import { ResponsiveTable } from "@/components/ui/responsive-table";
+
 
 import { Users, UserPlus, FileCheck, CheckCircle2, TrendingUp, Medal, Star, Download } from "lucide-react"
 
@@ -174,7 +176,8 @@ export default function TeamClient({ salesTeam, constTeam }: { salesTeam: any[],
             <div className="xl:col-span-2 flex flex-col">
               <SectionHeading title="Full Leaderboard" onExport={exportSalesCSV} />
               <PearlCard className="flex-1">
-                 <Table>
+                 <ResponsiveTable>
+<Table>
                    <TableHeader className="bg-[#FAFBFC] border-b border-[#E8ECF0]">
                      <TableRow className="hover:bg-transparent border-none">
                        <TableHead className="text-xs font-semibold text-[#64748B] uppercase py-4 pl-6 w-[80px]">Rank</TableHead>
@@ -203,6 +206,7 @@ export default function TeamClient({ salesTeam, constTeam }: { salesTeam: any[],
                      ))}
                    </TableBody>
                  </Table>
+</ResponsiveTable>
               </PearlCard>
             </div>
 
@@ -329,7 +333,8 @@ export default function TeamClient({ salesTeam, constTeam }: { salesTeam: any[],
             <div className="xl:col-span-2 flex flex-col">
               <SectionHeading title="Full Leaderboard" onExport={exportConstCSV} />
               <PearlCard className="flex-1">
-                 <Table>
+                 <ResponsiveTable>
+<Table>
                    <TableHeader className="bg-[#FAFBFC] border-b border-[#E8ECF0]">
                      <TableRow className="hover:bg-transparent border-none">
                        <TableHead className="text-xs font-semibold text-[#64748B] uppercase py-4 pl-6 w-[80px]">Rank</TableHead>
@@ -358,6 +363,7 @@ export default function TeamClient({ salesTeam, constTeam }: { salesTeam: any[],
                      ))}
                    </TableBody>
                  </Table>
+</ResponsiveTable>
               </PearlCard>
             </div>
 

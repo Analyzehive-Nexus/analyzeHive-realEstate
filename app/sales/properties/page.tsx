@@ -1,5 +1,7 @@
 import { EmptyState } from "@/components/ui/empty-state";
 'use client';
+import { ResponsiveTable } from "@/components/ui/responsive-table";
+
 
 import { useEffect, useState, useMemo } from 'react';
 import { createBrowserClient } from '@/lib/supabase-browser';
@@ -525,7 +527,7 @@ export default function PropertiesPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-y-3 mt-4 mb-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-y-3 mt-4 mb-5">
             <div className="flex items-center gap-2">
               <Hexagon className="w-4 h-4 text-blue-400" />
               <div>
@@ -567,7 +569,7 @@ export default function PropertiesPage() {
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               <Button 
                 variant="outline" 
                 size="sm"
@@ -694,7 +696,7 @@ export default function PropertiesPage() {
         </div>
 
       {/* 2. KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         {[
           { label: 'Total Units', value: kpis.total, sub: `${kpis.avail} available`, icon: Building2, color: 'blue' },
           { label: 'Available', value: kpis.avail, sub: `${kpis.soldP}% sold`, icon: CheckCircle2, color: 'emerald' },
@@ -979,7 +981,8 @@ export default function PropertiesPage() {
            Project-wise Summary
         </h2>
         <Card className="border-none shadow-sm bg-white overflow-hidden rounded-3xl">
-          <Table>
+          <ResponsiveTable>
+<Table>
             <TableHeader className="bg-gray-50/50">
               <TableRow className="border-gray-100 hover:bg-transparent">
                 <TableHead className="font-bold text-[#64748B] text-[11px] uppercase tracking-wider py-4">Project Name</TableHead>
@@ -1022,6 +1025,7 @@ export default function PropertiesPage() {
               })}
             </TableBody>
           </Table>
+</ResponsiveTable>
         </Card>
       </div>
 
@@ -1042,7 +1046,7 @@ export default function PropertiesPage() {
 
           <div className="overflow-y-auto max-h-[calc(90vh-140px)] px-6 py-5">
             <form id="add-flat-form" onSubmit={handleAddFlat} className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label>Flat / Unit Number *</Label>
                   <Input placeholder="e.g. A-101" value={flatForm.flatNumber} onChange={e => setFlatForm(p => ({ ...p, flatNumber: e.target.value }))} className="rounded-[10px] h-10" required />
@@ -1063,7 +1067,7 @@ export default function PropertiesPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label>Flat Type *</Label>
                   <Select value={flatForm.type} onValueChange={val => setFlatForm(p => ({ ...p, type: val }))}>
@@ -1087,7 +1091,7 @@ export default function PropertiesPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label>Area (sq ft)</Label>
                   <Input type="number" placeholder="e.g. 1200" value={flatForm.areaSqft} onChange={e => setFlatForm(p => ({ ...p, areaSqft: e.target.value }))} className="rounded-[10px] h-10" />
@@ -1109,7 +1113,7 @@ export default function PropertiesPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label>Base Price (₹)</Label>
                   <Input type="number" placeholder="e.g. 4500000" value={flatForm.price} onChange={e => setFlatForm(p => ({ ...p, price: e.target.value }))} className="rounded-[10px] h-10" />
@@ -1147,7 +1151,7 @@ export default function PropertiesPage() {
 
           <div className="overflow-y-auto max-h-[calc(90vh-140px)] px-6 py-5">
             <form className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label>Flat Number</Label>
                   <Input value={flatForm.flatNumber} onChange={e => setFlatForm(p => ({ ...p, flatNumber: e.target.value }))} className="rounded-[10px] h-10" />
@@ -1166,7 +1170,7 @@ export default function PropertiesPage() {
                   </Select>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                    <Label>Base Price (₹)</Label>
                    <Input type="number" value={flatForm.price} onChange={e => setFlatForm(p => ({ ...p, price: e.target.value }))} className="rounded-[10px] h-10" />
@@ -1245,7 +1249,7 @@ export default function PropertiesPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label>Amount (₹) *</Label>
                   <Input type="number" value={bookingForm.amount} onChange={e => setBookingForm(p => ({ ...p, amount: e.target.value }))} className="rounded-[10px] h-10" required />
@@ -1297,7 +1301,7 @@ export default function PropertiesPage() {
              {selectedFlat?.assigned_lead && (
                <div className="space-y-3">
                   <h4 className="font-bold text-[#0F172A] flex items-center gap-2"><UserPlus className="w-4 h-4 text-blue-500" /> Buyer Information</h4>
-                  <div className="grid grid-cols-2 gap-4 p-4 bg-blue-50/30 rounded-2xl border border-blue-50">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-blue-50/30 rounded-2xl border border-blue-50">
                     <div>
                       <p className="text-xs text-blue-600 font-bold uppercase tracking-tight">Name</p>
                       <p className="font-bold text-[#0F172A]">{selectedFlat.assigned_lead.name}</p>

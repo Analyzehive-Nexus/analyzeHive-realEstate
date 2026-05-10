@@ -1,20 +1,26 @@
+"use client";
+
 import { ReactNode } from "react"
+import { MobileSidebarSheet } from "@/components/shared/MobileSidebarSheet"
+import { useMediaQuery } from "@/hooks/useMediaQuery"
 import { DashboardSidebar } from "./components/dashboard-sidebar"
 import { Bell, Search, HelpCircle, ChevronRight, Download } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ModuleSwitcher } from "@/components/shared/ModuleSwitcher"
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
-  const user = { firstName: "CEO", lastName: "Admin", role: "MANAGING DIRECTOR" }
+  
+  const user = { firstName: "CEO", lastName: "Admin", role: "MANAGING DIRECTOR" };
+  const isMobile = useMediaQuery("(max-width: 768px)");
 
   return (
     <div 
       className="flex font-sans text-[#0F172A] min-h-screen" 
       style={{ background: '#FAFBFC' }}
     >
-      <DashboardSidebar user={user} />
+      {!isMobile && <DashboardSidebar user={user} />}
       
-      <div className="flex-1 flex flex-col pl-[260px] relative">
+      <div className={`flex-1 flex flex-col relative ${isMobile ? "pl-0" : "pl-[260px]"}`}>
         <header 
           className="flex shrink-0 flex-col px-6"
           style={{
@@ -28,6 +34,11 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           }}
         >
           <div className="flex items-center justify-between h-[64px] border-b border-[#E8ECF0]">
+            {isMobile && (
+              <MobileSidebarSheet>
+                <DashboardSidebar user={user} />
+              </MobileSidebarSheet>
+            )}
             {/* Breadcrumb Left */}
             <div className="flex items-center gap-2 text-sm font-medium text-slate-500 hidden md:flex">
               <span>Home</span>
@@ -38,7 +49,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             </div>
 
             {/* Global Search Center */}
-            <div className="flex-1 max-w-md mx-6">
+            <div className="hidden md:block flex-1 max-w-md mx-6">
               <div className="relative group">
                 <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400 group-focus-within:text-[#0066FF] transition-colors" />
                 <input 
@@ -51,7 +62,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
             {/* Right Actions */}
             <div className="flex items-center gap-2 sm:gap-4 shrink-0">
-              <ModuleSwitcher />
+              <div className="hidden sm:block"><ModuleSwitcher /></div>
               <Button className="bg-[#F59E0B] hover:bg-[#D97706] text-white font-semibold px-4 py-2 rounded-[10px] text-sm shadow-md transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 gap-2 hidden sm:flex h-9">
                 <Download className="h-4 w-4" />
                 <span className="tracking-wide">Export Report</span>

@@ -1,4 +1,6 @@
-"use client"
+"use client";
+import { ResponsiveTable } from "@/components/ui/responsive-table";
+
 
 import { useState } from "react"
 import { Building2, TrendingUp, BarChart3, Target, CalendarDays, Wallet } from "lucide-react"
@@ -121,7 +123,7 @@ export default function ForecastPage() {
       </div>
 
       {/* SECTION 1: KPI CARDS */}
-      <section className="grid gap-6 md:grid-cols-3 lg:grid-cols-6">
+      <section className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 lg:grid-cols-6">
         <InteractivePearlCard className="p-5 lg:col-span-2 relative">
           <div className="flex items-start justify-between">
             <div className="h-10 w-10 rounded-[10px] bg-blue-100 flex items-center justify-center text-blue-600 mb-4">
@@ -182,12 +184,13 @@ export default function ForecastPage() {
       </section>
 
       {/* SECTION 3 & 4: TABLES */}
-      <section className="grid lg:grid-cols-2 gap-8">
+      <section className="grid lg:grid-cols-1 md:grid-cols-2 gap-8">
         
         <div className="flex flex-col">
           <SectionHeading title="Project-wise Pipeline" />
           <PearlCard className="flex-1">
-             <Table>
+             <ResponsiveTable>
+<Table>
                <TableHeader className="bg-[#FAFBFC] border-b border-[#E8ECF0]">
                  <TableRow className="hover:bg-transparent border-none">
                    <TableHead className="text-xs font-semibold text-[#64748B] uppercase py-4 pl-6">Project</TableHead>
@@ -215,6 +218,7 @@ export default function ForecastPage() {
                  ))}
                </TableBody>
              </Table>
+</ResponsiveTable>
           </PearlCard>
         </div>
 
@@ -252,7 +256,8 @@ export default function ForecastPage() {
       <section>
         <SectionHeading title="Revenue Recognition Schedule" />
         <PearlCard>
-          <Table>
+          <ResponsiveTable>
+<Table>
             <TableHeader className="bg-[#FAFBFC] border-b border-[#E8ECF0]">
               <TableRow className="hover:bg-transparent border-none">
                 <TableHead className="text-xs font-semibold text-[#64748B] uppercase py-4 pl-6">Expected Event</TableHead>
@@ -276,6 +281,7 @@ export default function ForecastPage() {
               ))}
             </TableBody>
           </Table>
+</ResponsiveTable>
         </PearlCard>
       </section>
 

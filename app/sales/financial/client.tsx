@@ -1,4 +1,6 @@
 "use client";
+import { ResponsiveTable } from "@/components/ui/responsive-table";
+
 
 import { useEffect, useState } from "react";
 import { createBrowserClient } from "@/lib/supabase-browser";
@@ -249,7 +251,7 @@ export default function FinancialClient() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         <Card className="bg-white border-gray-200 shadow-sm">
           <CardContent className="p-4 flex items-center gap-4">
             <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
@@ -352,7 +354,8 @@ export default function FinancialClient() {
       {/* Ledger Table */}
       <Card className="bg-white border-gray-200 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
-          <Table>
+          <ResponsiveTable>
+<Table>
             <TableHeader className="bg-[#F8FAFC]">
               <TableRow>
                 <TableHead>Date</TableHead>
@@ -412,6 +415,7 @@ export default function FinancialClient() {
               )}
             </TableBody>
           </Table>
+</ResponsiveTable>
         </div>
       </Card>
 

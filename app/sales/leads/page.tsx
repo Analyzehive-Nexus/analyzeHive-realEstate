@@ -1,4 +1,6 @@
 'use client';
+import { ResponsiveTable } from "@/components/ui/responsive-table";
+
 
 import { EmptyState } from "@/components/ui/empty-state";
 import { SkeletonCard } from "@/components/ui/skeleton-card";
@@ -532,7 +534,7 @@ export default function LeadsPage() {
           <Skeleton className="h-8 w-48" />
           <Skeleton className="h-10 w-32" />
         </div>
-        <div className="grid gap-4 md:grid-cols-5">
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5">
           {Array.from({ length: 5 }).map((_, i) => <SkeletonCard key={i} />)}
         </div>
         <div className="flex justify-between">
@@ -563,7 +565,7 @@ export default function LeadsPage() {
           </Button>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-5">
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5">
           {loading ? (
             Array(5).fill(0).map((_, i) => (
               <Card key={i} className="bg-white border-[#E8ECF0] rounded-[16px]">
@@ -716,7 +718,7 @@ export default function LeadsPage() {
               onSubmit={handleAddLead}
               className="px-6 py-5 space-y-4"
             >
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label className="text-sm font-medium">Full Name *</Label>
                   <Input
@@ -739,7 +741,7 @@ export default function LeadsPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label className="text-sm font-medium">Email Address</Label>
                   <Input
@@ -770,7 +772,7 @@ export default function LeadsPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label className="text-sm font-medium">Assign Broker</Label>
                   <Select
@@ -892,7 +894,8 @@ export default function LeadsPage() {
               action={!searchQuery ? { label: "Add Lead", onClick: () => setShowAddSheet(true) } : undefined}
             />
           ) : (
-          <Table>
+          <ResponsiveTable>
+<Table>
             <TableHeader className="bg-[#F8FAFC] border-b border-gray-200">
               <TableRow className="hover:bg-transparent border-none">
                 <TableHead className="w-[50px] text-center pl-4 text-[12px] font-semibold text-[#64748B] uppercase">#</TableHead>
@@ -1004,7 +1007,7 @@ export default function LeadsPage() {
                           <div className="p-6 space-y-8 overflow-y-auto max-h-[calc(100vh-250px)]">
                             <div className="space-y-3">
                               <h3 className="text-[12px] font-bold text-[#64748B] uppercase tracking-[0.05em]">Contact Info</h3>
-                              <div className="grid grid-cols-2 gap-4">
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="bg-[#F8FAFC] p-3 rounded-[12px] border border-gray-100">
                                   <p className="text-[11px] text-[#64748B] uppercase font-bold mb-1">Phone</p>
                                   <p className="text-[14px] font-semibold text-[#0F172A]">{selectedLead?.phone}</p>
@@ -1016,7 +1019,7 @@ export default function LeadsPage() {
                               </div>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                               <div className="space-y-2">
                                 <h3 className="text-[12px] font-bold text-[#64748B] uppercase tracking-[0.05em]">Project Interest</h3>
                                 <p className="text-sm font-semibold">{selectedLead?.project_interest || 'Any / All'}</p>
@@ -1089,6 +1092,7 @@ export default function LeadsPage() {
                 )})}
             </TableBody>
           </Table>
+</ResponsiveTable>
           )}
         </div>
       </Card>
@@ -1123,7 +1127,7 @@ export default function LeadsPage() {
               onSubmit={handleSaveEdit}
               className="px-6 py-5 space-y-4"
             >
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label className="text-sm font-medium">Full Name *</Label>
                   <Input
@@ -1146,7 +1150,7 @@ export default function LeadsPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label className="text-sm font-medium">Email Address</Label>
                   <Input
@@ -1177,7 +1181,7 @@ export default function LeadsPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label className="text-sm font-medium">Current Status *</Label>
                   <Select
@@ -1216,7 +1220,7 @@ export default function LeadsPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label className="text-sm font-medium">Project Interest</Label>
                   <Select
@@ -1337,7 +1341,7 @@ export default function LeadsPage() {
               </Select>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label className="text-sm font-medium">Visit Date *</Label>
                 <Input

@@ -1,4 +1,6 @@
-"use client"
+"use client";
+import { ResponsiveTable } from "@/components/ui/responsive-table";
+
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
@@ -118,7 +120,8 @@ export function VisitsClient({ initialVisits, leads, flats }: {
 
       {view === "list" ? (
         <div className="bg-white rounded-lg border border-slate-200 overflow-hidden shadow-sm dark:bg-slate-950 dark:border-slate-800">
-          <Table>
+          <ResponsiveTable>
+<Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Lead Name</TableHead>
@@ -169,6 +172,7 @@ export function VisitsClient({ initialVisits, leads, flats }: {
               })}
             </TableBody>
           </Table>
+</ResponsiveTable>
         </div>
       ) : (
         <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm dark:bg-slate-950 dark:border-slate-800 text-center">

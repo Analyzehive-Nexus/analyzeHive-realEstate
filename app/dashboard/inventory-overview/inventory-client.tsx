@@ -1,4 +1,6 @@
 "use client";
+import { ResponsiveTable } from "@/components/ui/responsive-table";
+
 
 import { Home, Key, Lock, CheckCircle2 } from "lucide-react";
 import { format } from "date-fns";
@@ -96,7 +98,8 @@ export default function InventoryClient({ flats }: { flats: Flat[] }) {
 
       <Card className="border-slate-200 overflow-hidden mt-6">
         <div className="p-0 overflow-auto max-h-[600px]">
-          <Table>
+          <ResponsiveTable>
+<Table>
             <TableHeader className="sticky top-0 bg-slate-50 z-10 shadow-sm">
               <TableRow>
                 <TableHead>Project</TableHead>
@@ -124,6 +127,7 @@ export default function InventoryClient({ flats }: { flats: Flat[] }) {
               ))}
             </TableBody>
           </Table>
+</ResponsiveTable>
         </div>
       </Card>
     </div>

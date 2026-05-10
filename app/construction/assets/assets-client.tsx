@@ -96,7 +96,7 @@ export default function AssetsClient({ assets }: { assets: Asset[] }) {
                 <Label htmlFor="name">Asset Name/Model</Label>
                 <Input id="name" name="name" placeholder="e.g. CAT Excavator 320" required />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="grid gap-2">
                   <Label htmlFor="type">Equipment Type</Label>
                   <Select name="type" required defaultValue="Excavator">

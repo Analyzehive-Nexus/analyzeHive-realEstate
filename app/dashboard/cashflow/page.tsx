@@ -1,4 +1,6 @@
 "use client";
+import { ResponsiveTable } from "@/components/ui/responsive-table";
+
 
 import { useState, useEffect } from "react";
 import { getCashFlowData, Period, CashFlowData } from "./actions";
@@ -106,7 +108,7 @@ export default function CashFlowPage() {
       </div>
 
       {/* KPI cards */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         <Card>
           <CardContent className="p-4">
             <p className="text-sm text-gray-500 uppercase">Total Inflow</p>
@@ -156,7 +158,8 @@ export default function CashFlowPage() {
           <CardTitle>All Transactions</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
+          <ResponsiveTable>
+<Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Date</TableHead>
@@ -182,6 +185,7 @@ export default function CashFlowPage() {
               ))}
             </TableBody>
           </Table>
+</ResponsiveTable>
         </CardContent>
       </Card>
     </div>

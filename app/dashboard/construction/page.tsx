@@ -1,4 +1,6 @@
 "use client";
+import { ResponsiveTable } from "@/components/ui/responsive-table";
+
 
 import { useEffect, useState } from "react";
 import { createBrowserClient } from "@/lib/supabase-browser";
@@ -168,7 +170,7 @@ export default function ConstructionStatusPage() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+      <div className="grid gap-4 grid-cols-2 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 lg:grid-cols-5">
         {kpis.map((kpi, i) => (
           <Card key={i} className="bg-white border-gray-200">
             <CardContent className="p-4 flex items-center gap-3">
@@ -227,7 +229,8 @@ export default function ConstructionStatusPage() {
           {criticalStock.length === 0 ? (
             <p className="text-gray-500 text-center py-4">No critical stock items</p>
           ) : (
-            <Table>
+            <ResponsiveTable>
+<Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Material</TableHead>
@@ -247,6 +250,7 @@ export default function ConstructionStatusPage() {
                 ))}
               </TableBody>
             </Table>
+</ResponsiveTable>
           )}
         </CardContent>
       </Card>
@@ -260,7 +264,8 @@ export default function ConstructionStatusPage() {
           {pendingDemands.length === 0 ? (
             <p className="text-gray-500 text-center py-4">No pending demands</p>
           ) : (
-            <Table>
+            <ResponsiveTable>
+<Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Requested By</TableHead>
@@ -305,6 +310,7 @@ export default function ConstructionStatusPage() {
                 ))}
               </TableBody>
             </Table>
+</ResponsiveTable>
           )}
         </CardContent>
       </Card>

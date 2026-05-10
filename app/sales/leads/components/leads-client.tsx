@@ -1,4 +1,6 @@
-"use client"
+"use client";
+import { ResponsiveTable } from "@/components/ui/responsive-table";
+
 
 import { useState } from "react"
 import { createLeadAction, updateLeadStatusAction } from "../actions"
@@ -123,7 +125,8 @@ export function LeadsClient({ initialData, currentBrokerName }: { initialData: L
 
       {/* Leads Table */}
       <div className="bg-white rounded-lg border border-slate-200 overflow-hidden shadow-sm dark:bg-slate-950 dark:border-slate-800">
-        <Table>
+        <ResponsiveTable>
+<Table>
           <TableHeader>
             <TableRow>
               <TableHead>Name</TableHead>
@@ -151,6 +154,7 @@ export function LeadsClient({ initialData, currentBrokerName }: { initialData: L
             ))}
           </TableBody>
         </Table>
+</ResponsiveTable>
       </div>
 
       {/* Add Lead Dialog */}
@@ -201,7 +205,7 @@ export function LeadsClient({ initialData, currentBrokerName }: { initialData: L
               <SheetDescription>Created on {new Date(selectedLead.created_at).toLocaleString()}</SheetDescription>
             </SheetHeader>
             <div className="grid gap-6 py-6">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1">
                   <Label className="text-slate-500">Phone</Label>
                   <div className="font-medium">{selectedLead.phone}</div>

@@ -1,5 +1,7 @@
 import { EmptyState } from "@/components/ui/empty-state";
-"use client"
+"use client";
+import { ResponsiveTable } from "@/components/ui/responsive-table";
+
 
 import { 
   IndianRupee, TrendingDown, TrendingUp, Users, Target, Building2, 
@@ -118,7 +120,7 @@ export default function DashboardClient({
     <div className="p-8 max-w-[1800px] mx-auto pb-24 space-y-10 font-sans text-[#0F172A]">
       
       {/* SECTION 1 - EXECUTIVE KPI CARDS */}
-      <section className="grid gap-6 md:grid-cols-3">
+      <section className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         {/* ROW 1 */}
         <InteractivePearlCard className="p-6 relative">
           <div className="flex justify-between items-start">
@@ -405,7 +407,7 @@ export default function DashboardClient({
       </section>
 
       {/* SECTION 5 - LEAD CONVERSION FUNNEL */}
-      <section className="grid lg:grid-cols-2 gap-8">
+      <section className="grid lg:grid-cols-1 md:grid-cols-2 gap-8">
         <div className="flex flex-col">
           <SectionHeading title="Lead Conversion Funnel" />
           <PearlCard className="flex-1 p-10 flex flex-col items-center justify-center bg-[#F8FAFC]">
@@ -439,7 +441,8 @@ export default function DashboardClient({
         <div className="flex flex-col">
           <SectionHeading title="System Brokers & Admins" />
           <PearlCard className="flex-1">
-             <Table>
+             <ResponsiveTable>
+<Table>
                <TableHeader className="bg-[#FAFBFC] border-b border-[#E8ECF0]">
                  <TableRow className="hover:bg-transparent border-none">
                    <TableHead className="text-xs font-semibold text-[#64748B] uppercase py-4">Broker</TableHead>
@@ -462,6 +465,7 @@ export default function DashboardClient({
                  )}
                </TableBody>
              </Table>
+</ResponsiveTable>
           </PearlCard>
         </div>
       </section>
@@ -488,7 +492,7 @@ export default function DashboardClient({
                
                <Progress value={p.completion_percentage} className={`h-2 mb-6 ${p.completion_percentage > 90 ? 'bg-emerald-100 [&>div]:bg-[#10B981]' : p.completion_percentage > 50 ? 'bg-blue-100 [&>div]:bg-[#0066FF]' : 'bg-orange-100 [&>div]:bg-[#F59E0B]'}`} />
 
-               <div className="grid grid-cols-2 gap-4 mb-2">
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-2">
                  <div>
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Budget Total</span>
                     <span className="text-[15px] font-bold text-[#0F172A]">₹{(p.budget_total).toLocaleString('en-IN')}</span>

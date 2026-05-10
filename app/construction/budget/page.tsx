@@ -1,4 +1,6 @@
-"use client"
+"use client";
+import { ResponsiveTable } from "@/components/ui/responsive-table";
+
 
 import { useState } from "react"
 import { 
@@ -97,7 +99,7 @@ export default function BudgetPage() {
       </div>
 
       {/* KPI CARDS */}
-      <section className="grid gap-6 md:grid-cols-4">
+      <section className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         <InteractivePearlCard className="p-5 border-l-4 border-l-[#0066FF]">
           <CardContent className="p-0 flex flex-col justify-center">
             <p className="text-[12px] font-semibold text-[#64748B] uppercase tracking-[0.05em] mb-1">Total Budget</p>
@@ -129,7 +131,8 @@ export default function BudgetPage() {
         <div className="lg:col-span-3 flex flex-col">
           <SectionHeading title="Category Allocation Tracker" />
           <PearlCard className="flex-1">
-             <Table>
+             <ResponsiveTable>
+<Table>
                <TableHeader className="bg-[#FAFBFC] border-b border-[#E8ECF0]">
                  <TableRow className="hover:bg-transparent border-none">
                    <TableHead className="text-xs text-[#64748B] uppercase py-4">Expense Category</TableHead>
@@ -162,6 +165,7 @@ export default function BudgetPage() {
                  ))}
                </TableBody>
              </Table>
+</ResponsiveTable>
           </PearlCard>
         </div>
 
@@ -252,7 +256,7 @@ export default function BudgetPage() {
                 <DialogTitle>Log New Expense</DialogTitle>
               </DialogHeader>
               <div className="grid gap-4 py-4">
-                 <div className="grid grid-cols-2 gap-4">
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                    <div className="space-y-2">
                      <Label>Date</Label>
                      <Input type="date" className="rounded-[8px]" defaultValue="2026-03-18" />
@@ -301,7 +305,8 @@ export default function BudgetPage() {
         </div>
 
         <PearlCard>
-          <Table>
+          <ResponsiveTable>
+<Table>
             <TableHeader className="bg-[#FAFBFC] border-b border-[#E8ECF0]">
               <TableRow className="hover:bg-transparent border-none">
                 <TableHead className="font-semibold text-xs text-[#64748B] uppercase py-4">Transaction ID</TableHead>
@@ -346,6 +351,7 @@ export default function BudgetPage() {
               ))}
             </TableBody>
           </Table>
+</ResponsiveTable>
         </PearlCard>
       </section>
 

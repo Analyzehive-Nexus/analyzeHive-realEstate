@@ -38,7 +38,7 @@ export default function CommandCenterPage() {
           <h1 className="text-4xl font-bold text-slate-900 mb-2">Command Center</h1>
           <p className="text-slate-500">Select a module to continue</p>
         </div>
-        <div className="grid gap-6 md:grid-cols-3">
+        <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           {modules.map((mod) => (
             <Card
               key={mod.path}

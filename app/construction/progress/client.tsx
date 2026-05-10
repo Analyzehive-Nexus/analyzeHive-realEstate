@@ -75,7 +75,7 @@ export default function ProgressClient({ initialReports }: { initialReports: any
       </div>
 
       {/* KPI CARDS */}
-      <section className="grid gap-6 md:grid-cols-4">
+      <section className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         <InteractivePearlCard className="p-5">
           <CardContent className="p-0 flex flex-col justify-center">
             <p className="text-[12px] font-semibold text-[#64748B] uppercase tracking-[0.05em] mb-1">Reports Today</p>
@@ -167,7 +167,7 @@ export default function ProgressClient({ initialReports }: { initialReports: any
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-8 items-center bg-slate-50 p-4 rounded-[12px] border border-[#E8ECF0]">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center bg-slate-50 p-4 rounded-[12px] border border-[#E8ECF0]">
                    <div className="space-y-4">
                      <div className="flex justify-between items-center">
                         <Label>Area Completion Status</Label>
@@ -175,7 +175,7 @@ export default function ProgressClient({ initialReports }: { initialReports: any
                      </div>
                      <Slider value={reportProgress} onValueChange={setReportProgress} max={100} step={1} className="[&>span:first-child]:bg-blue-100 [&_[role=slider]]:bg-[#0066FF] [&_[role=slider]]:border-[#0066FF]" />
                    </div>
-                   <div className="grid grid-cols-2 gap-4">
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label>Weather</Label>
                         <Select defaultValue="sunny">

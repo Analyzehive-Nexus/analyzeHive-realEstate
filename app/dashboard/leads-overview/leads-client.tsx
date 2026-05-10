@@ -1,4 +1,6 @@
 "use client";
+import { ResponsiveTable } from "@/components/ui/responsive-table";
+
 
 import { Download } from "lucide-react";
 import { format } from "date-fns";
@@ -72,7 +74,8 @@ export default function LeadsClient({ leads }: { leads: Lead[] }) {
 
       <Card className="border-slate-200">
         <div className="p-0 overflow-auto max-h-[600px]">
-          <Table>
+          <ResponsiveTable>
+<Table>
             <TableHeader className="sticky top-0 bg-slate-50 z-10 shadow-sm border-b">
               <TableRow>
                 <TableHead>Date Added</TableHead>
@@ -101,6 +104,7 @@ export default function LeadsClient({ leads }: { leads: Lead[] }) {
               ))}
             </TableBody>
           </Table>
+</ResponsiveTable>
         </div>
       </Card>
     </div>

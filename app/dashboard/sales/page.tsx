@@ -1,4 +1,6 @@
-"use client"
+"use client";
+import { ResponsiveTable } from "@/components/ui/responsive-table";
+
 
 import { useState } from "react"
 import { Users, Target, Building2, TrendingUp, Medal, Download } from "lucide-react"
@@ -193,7 +195,8 @@ export default function SalesPerformancePage() {
       <section>
         <SectionHeading title="Top Performing Brokers / Agents" onExport={exportCSV} />
         <PearlCard>
-          <Table>
+          <ResponsiveTable>
+<Table>
              <TableHeader className="bg-[#FAFBFC] border-b border-[#E8ECF0]">
                <TableRow className="hover:bg-transparent border-none">
                  <TableHead className="text-xs font-semibold text-[#64748B] uppercase py-4 pl-6 text-center w-[80px]">Rank</TableHead>
@@ -242,15 +245,17 @@ export default function SalesPerformancePage() {
                ))}
              </TableBody>
            </Table>
+</ResponsiveTable>
         </PearlCard>
       </section>
 
       {/* SECTION 4 & 5: CHANNEL ROI & PIPELINE */}
-      <section className="grid lg:grid-cols-2 gap-8">
+      <section className="grid lg:grid-cols-1 md:grid-cols-2 gap-8">
         <div className="flex flex-col">
           <SectionHeading title="Channel ROI Analysis" />
           <PearlCard className="flex-1 overflow-x-auto">
-             <Table>
+             <ResponsiveTable>
+<Table>
                <TableHeader className="bg-[#FAFBFC] border-b border-[#E8ECF0]">
                  <TableRow className="hover:bg-transparent border-none">
                    <TableHead className="text-[10px] font-bold text-[#64748B] uppercase py-3 pl-4">Channel</TableHead>
@@ -276,6 +281,7 @@ export default function SalesPerformancePage() {
                  ))}
                </TableBody>
              </Table>
+</ResponsiveTable>
           </PearlCard>
         </div>
 

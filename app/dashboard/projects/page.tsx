@@ -1,3 +1,4 @@
+import { ResponsiveTable } from "@/components/ui/responsive-table";
 export const dynamic = 'force-dynamic';
 
 import { Building2, Home, Building, Factory, PlusCircle, CheckCircle2, Clock, AlertTriangle } from "lucide-react"
@@ -145,13 +146,14 @@ export default async function ProjectProgressPage() {
       </section>
 
       {/* SECTION 3 & 4: TABLES */}
-      <section className="grid xl:grid-cols-2 gap-8">
+      <section className="grid xl:grid-cols-1 md:grid-cols-2 gap-8">
         
         {/* MILESTONES (MOCK FALLBACK) */}
         <div className="flex flex-col">
           <SectionHeading title="Milestone Tracker" />
           <PearlCard className="flex-1">
-             <Table>
+             <ResponsiveTable>
+<Table>
                <TableHeader className="bg-[#FAFBFC] border-b border-[#E8ECF0]">
                  <TableRow className="hover:bg-transparent border-none">
                    <TableHead className="text-[10px] font-bold text-[#64748B] uppercase py-3 pl-4">Project / Milestone</TableHead>
@@ -179,6 +181,7 @@ export default async function ProjectProgressPage() {
                  ))}
                </TableBody>
              </Table>
+</ResponsiveTable>
           </PearlCard>
         </div>
 
@@ -186,7 +189,8 @@ export default async function ProjectProgressPage() {
         <div className="flex flex-col">
           <SectionHeading title="Project Financial Summary" />
           <PearlCard className="flex-1">
-             <Table>
+             <ResponsiveTable>
+<Table>
                <TableHeader className="bg-[#FAFBFC] border-b border-[#E8ECF0]">
                  <TableRow className="hover:bg-transparent border-none">
                    <TableHead className="text-[10px] font-bold text-[#64748B] uppercase py-3 pl-4">Project</TableHead>
@@ -213,6 +217,7 @@ export default async function ProjectProgressPage() {
                  {(!projectsData || projectsData.length === 0) && <TableRow><TableCell colSpan={4} className="text-center py-4 text-slate-500">No project financials to display.</TableCell></TableRow>}
                </TableBody>
              </Table>
+</ResponsiveTable>
           </PearlCard>
         </div>
 
