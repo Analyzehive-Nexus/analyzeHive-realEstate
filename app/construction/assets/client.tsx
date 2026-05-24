@@ -17,9 +17,17 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/toast";
-import { addAsset, updateAssetStatus, assignAsset } from "./actions";
+import { addAsset, updateAssetStatus, assignAsset, fetchMaintenanceLogs, addMaintenanceLog } from "./actions";
 
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import dynamic from "next/dynamic";
+
+const AssetUsageChart = dynamic(
+  () => import("./components/asset-charts").then((mod) => mod.AssetUsageChart),
+  {
+    ssr: false,
+    loading: () => <div className="h-full w-full bg-slate-50 animate-pulse rounded-lg flex items-center justify-center text-xs text-slate-400">Loading usage chart...</div>
+  }
+);
 
 const usageLogs = [
   { day: "Mon", hours: 6.5 },
@@ -79,7 +87,20 @@ export default function AssetsClient({
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isAssignOpen, setIsAssignOpen] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState<any>(null);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Maintenance Logs State
+  const [activeMaintLogs, setActiveMaintLogs] = useState<any[]>([]);
+  const [isMaintLogsLoading, setIsMaintLogsLoading] = useState(false);
+  const [isAddMaintOpen, setIsAddMaintOpen] = useState(false);
+
+  // Form Fields State - Log Maintenance
+  const [maintType, setMaintType] = useState("");
+  const [maintBy, setMaintBy] = useState("");
+  const [maintCost, setMaintCost] = useState("");
+  const [maintNotes, setMaintNotes] = useState("");
+  const [maintDate, setMaintDate] = useState("");
 
   // Form Fields State - Add Asset
   const [addName, setAddName] = useState("");
@@ -101,14 +122,14 @@ export default function AssetsClient({
     return {
       id: a.id,
       displayId: a.id?.substring(0, 8) || 'Unknown',
-      name: a.asset_name || 'Unnamed Asset',
-      type: a.asset_type || 'General',
+      name: a.name || a.asset_name || 'Unnamed Asset',
+      type: a.asset_type || a.type || 'General',
       status: a.status || 'Active',
-      nextService: a.next_maintenance_date ? new Date(a.next_maintenance_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '--',
+      nextService: (a.next_service_date || a.next_maintenance_date) ? new Date(a.next_service_date || a.next_maintenance_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '--',
       assigned: assignedUser,
       assigned_user_id: a.assigned_user_id || '',
-      location: a.current_location || 'Storage',
-      hours: a.total_hours_used || 0,
+      location: a.location || a.current_location || 'Storage',
+      hours: a.hours_logged || a.total_hours_used || 0,
       purch: a.purchase_date ? new Date(a.purchase_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '--',
       cost: a.purchase_cost ? `₹${(a.purchase_cost / 100000).toFixed(1)}L` : '--'
     };
@@ -207,6 +228,60 @@ export default function AssetsClient({
         setLocalAssets(localAssets.map(a => a.id === selectedAsset.id ? res.data : a));
       }
     }
+  };
+
+  const loadMaintenanceLogsForAsset = async (assetId: string) => {
+    setIsMaintLogsLoading(true);
+    const res = await fetchMaintenanceLogs(assetId);
+    setIsMaintLogsLoading(false);
+    if (res.success && res.data) {
+      setActiveMaintLogs(res.data);
+    } else {
+      setActiveMaintLogs([]);
+    }
+  };
+
+  const handleAddMaintenanceSubmit = async () => {
+    if (!selectedAsset) return;
+    if (!maintType.trim() || !maintBy.trim() || !maintDate) {
+      toast({
+        title: "Validation Error",
+        description: "Service Type, Serviced By, and Service Date are required.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    const costNum = parseFloat(maintCost) || 0;
+    const res = await addMaintenanceLog(
+      selectedAsset.id,
+      maintType,
+      maintBy,
+      costNum,
+      maintNotes,
+      maintDate
+    );
+    setIsSubmitting(false);
+
+    if (res.error) {
+      toast({ title: "Failed to Log Maintenance", description: res.error, variant: "destructive" });
+    } else {
+      toast({ title: "Maintenance Logged", description: "The service record has been successfully saved!" });
+      setIsAddMaintOpen(false);
+      resetMaintForm();
+      
+      // Reload logs reactively
+      await loadMaintenanceLogsForAsset(selectedAsset.id);
+    }
+  };
+
+  const resetMaintForm = () => {
+    setMaintType("");
+    setMaintBy("");
+    setMaintCost("");
+    setMaintNotes("");
+    setMaintDate("");
   };
 
   const triggerAssignModal = (ast: any) => {
@@ -386,6 +461,80 @@ export default function AssetsClient({
         </DialogContent>
       </Dialog>
 
+      {/* LOG MAINTENANCE DIALOG */}
+      <Dialog open={isAddMaintOpen} onOpenChange={setIsAddMaintOpen}>
+        <DialogContent className="sm:max-w-[450px] bg-white border border-slate-100 shadow-2xl rounded-[24px]">
+          <DialogHeader className="border-b border-[#F1F5F9] pb-4">
+            <DialogTitle className="text-lg font-bold text-[#0F172A] text-left">Log Equipment Maintenance</DialogTitle>
+            <p className="text-[11px] text-slate-500 mt-0.5 text-left font-medium">Record a new service, repair, or routine inspection for this machinery.</p>
+          </DialogHeader>
+          <div className="grid gap-4 py-4 text-left">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Asset Selected</Label>
+              <div className="p-3 bg-slate-50 border border-[#E8ECF0] rounded-[10px] font-bold text-[#0F172A] text-[14px]">
+                {selectedAsset?.name} <span className="font-semibold text-slate-400 text-xs ml-1.5">({selectedAsset?.type})</span>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5 col-span-2">
+                <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Service Type / Action</Label>
+                <Input 
+                  placeholder="e.g. Routine Oil Change, Track Replacement" 
+                  className="rounded-[8px] bg-white font-semibold text-[13px]" 
+                  value={maintType}
+                  onChange={e => setMaintType(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Serviced By / Vendor</Label>
+                <Input 
+                  placeholder="e.g. In-house, TechMech Services" 
+                  className="rounded-[8px] bg-white text-[13px]" 
+                  value={maintBy}
+                  onChange={e => setMaintBy(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Cost (₹)</Label>
+                <Input 
+                  type="number"
+                  placeholder="0" 
+                  className="rounded-[8px] bg-white font-bold text-[13px]" 
+                  value={maintCost}
+                  onChange={e => setMaintCost(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5 col-span-2">
+                <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Service Date</Label>
+                <Input 
+                  type="date"
+                  className="rounded-[8px] bg-white text-[13px]" 
+                  value={maintDate}
+                  onChange={e => setMaintDate(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5 col-span-2">
+                <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Additional Notes</Label>
+                <Textarea 
+                  placeholder="Describe the issues resolved, parts replaced, or general status..." 
+                  className="rounded-[8px] bg-white text-[13px]" 
+                  value={maintNotes}
+                  onChange={e => setMaintNotes(e.target.value)}
+                  rows={3}
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0 border-t border-[#F1F5F9] pt-4">
+            <Button variant="outline" className="rounded-[10px]" onClick={() => setIsAddMaintOpen(false)}>Cancel</Button>
+            <Button className="bg-[#0066FF] hover:bg-[#0052CC] text-white rounded-[10px] font-bold" onClick={handleAddMaintenanceSubmit} disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="animate-spin w-4 h-4 mr-1.5" />}
+              Save Record
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* ASSETS DISPLAY */}
       {viewMode === 'grid' ? (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -427,79 +576,16 @@ export default function AssetsClient({
                  </div>
 
                  <div className="flex gap-2 mt-6 pt-4 border-t border-[#E8ECF0]">
-                    <Sheet>
-                      <SheetTrigger asChild>
-                        <Button className="flex-1 bg-white border border-[#E8ECF0] text-[#0F172A] hover:bg-slate-50 text-[13px] h-9 rounded-[8px] shadow-sm font-semibold">Details</Button>
-                      </SheetTrigger>
-                      <SheetContent className="sm:max-w-[500px] overflow-y-auto bg-white border-l border-[#E8ECF0] shadow-2xl">
-                        <SheetHeader className="mb-6 border-b border-[#E8ECF0] pb-4">
-                          <SheetTitle className="text-xl font-bold text-left">{ast.name}</SheetTitle>
-                          <div className="flex items-center gap-3 mt-2">
-                             <StatusBadge s={ast.status} />
-                             <span className="text-[13px] font-medium text-slate-500">ID: <span className="font-mono">{ast.id}</span></span>
-                          </div>
-                        </SheetHeader>
-                        
-                        <div className="space-y-6 text-left">
-                           <div className="grid grid-cols-3 gap-3">
-                              <div className="bg-slate-50 p-3 rounded-[10px] border border-[#E8ECF0]">
-                                 <p className="text-[10px] uppercase font-bold text-slate-400">Purchased</p>
-                                 <p className="font-semibold text-[13px] text-[#0F172A] mt-1">{ast.purch}</p>
-                              </div>
-                              <div className="bg-slate-50 p-3 rounded-[10px] border border-[#E8ECF0]">
-                                 <p className="text-[10px] uppercase font-bold text-slate-400">Cost</p>
-                                 <p className="font-semibold text-[13px] text-[#0F172A] mt-1">{ast.cost}</p>
-                              </div>
-                              <div className="bg-slate-50 p-3 rounded-[10px] border border-[#E8ECF0]">
-                                 <p className="text-[10px] uppercase font-bold text-slate-400">Total Hrs</p>
-                                 <p className="font-semibold text-[13px] text-[#0F172A] mt-1">{ast.hours}</p>
-                              </div>
-                           </div>
-
-                           <div>
-                             <h4 className="text-[13px] font-bold text-slate-500 uppercase tracking-wider mb-3">7-Day Usage Log</h4>
-                             <div className="h-[200px] border border-[#E8ECF0] rounded-[12px] p-2 bg-white">
-                               <ResponsiveContainer width="100%" height="100%">
-                                  <BarChart data={usageLogs} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E8ECF0"/>
-                                    <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#64748B'}} />
-                                    <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#64748B'}} />
-                                    <Tooltip cursor={{fill: '#F8FAFC'}} contentStyle={{borderRadius: '8px', border: '1px solid #E8ECF0', boxShadow: '0 4px 12px rgba(0,0,0,0.1)'}}/>
-                                    <Bar dataKey="hours" name="Hours" fill="#0066FF" radius={[4, 4, 0, 0]} barSize={24} />
-                                  </BarChart>
-                                </ResponsiveContainer>
-                             </div>
-                           </div>
-
-                           <div>
-                             <h4 className="text-[13px] font-bold text-slate-500 uppercase tracking-wider mb-3 flex justify-between items-center">
-                                Maintenance History
-                                <Button variant="ghost" className="h-6 text-[#0066FF] hover:bg-blue-50 hover:text-[#0066FF] text-[11px] px-2 rounded-[6px]"><Plus className="w-3 h-3 mr-1"/> Log</Button>
-                             </h4>
-                             <div className="divide-y divide-[#E8ECF0] border border-[#E8ECF0] rounded-[12px] bg-white text-[13px]">
-                                {maintHistory.map((m, idx) => (
-                                  <div key={idx} className="p-3 hover:bg-slate-50 transition-colors">
-                                    <div className="flex justify-between items-start mb-1">
-                                      <span className="font-bold text-[#0F172A]">{m.type}</span>
-                                      <span className="font-bold text-[#0066FF]">{m.cost}</span>
-                                    </div>
-                                    <div className="text-[11px] text-slate-500 mb-1.5">{m.date} | By: {m.by}</div>
-                                    <p className="text-slate-600 text-[12px] leading-relaxed">{m.notes}</p>
-                                  </div>
-                                ))}
-                             </div>
-                           </div>
-                           
-                           <div className="pt-4 border-t border-[#E8ECF0] flex gap-3">
-                              {ast.status === 'Active' ? (
-                                <Button className="flex-1 bg-amber-500 hover:bg-amber-600 text-white rounded-[8px] font-bold" onClick={() => handleStatusChange(ast.id, 'Maintenance')}>Send to Maintenance</Button>
-                              ) : (
-                                <Button className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white rounded-[8px] font-bold" onClick={() => handleStatusChange(ast.id, 'Active')}>Mark as Active</Button>
-                              )}
-                           </div>
-                        </div>
-                      </SheetContent>
-                    </Sheet>
+                    <Button 
+                      className="flex-1 bg-white border border-[#E8ECF0] text-[#0F172A] hover:bg-slate-50 text-[13px] h-9 rounded-[8px] shadow-sm font-semibold"
+                      onClick={() => {
+                        setSelectedAsset(ast);
+                        loadMaintenanceLogsForAsset(ast.id);
+                        setIsDetailsOpen(true);
+                      }}
+                    >
+                      Details
+                    </Button>
 
                     <Button 
                       className="flex-1 bg-[#0066FF] hover:bg-[#0052CC] text-white text-[13px] h-9 rounded-[8px] shadow-sm font-semibold"
@@ -575,6 +661,94 @@ export default function AssetsClient({
           </ResponsiveTable>
         </PearlCard>
       )}
+
+      {/* SINGLE UNIFIED ASSET DETAILS SHEET */}
+      <Sheet open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+        <SheetContent className="sm:max-w-[500px] overflow-y-auto bg-white border-l border-[#E8ECF0] shadow-2xl">
+          {selectedAsset && (
+            <>
+              <SheetHeader className="mb-6 border-b border-[#E8ECF0] pb-4">
+                <SheetTitle className="text-xl font-bold text-left">{selectedAsset.name}</SheetTitle>
+                <div className="flex items-center gap-3 mt-2">
+                   <StatusBadge s={selectedAsset.status} />
+                   <span className="text-[13px] font-medium text-slate-500">ID: <span className="font-mono">{selectedAsset.id}</span></span>
+                </div>
+              </SheetHeader>
+              
+              <div className="space-y-6 text-left">
+                 <div className="grid grid-cols-3 gap-3">
+                    <div className="bg-slate-50 p-3 rounded-[10px] border border-[#E8ECF0]">
+                       <p className="text-[10px] uppercase font-bold text-slate-400">Purchased</p>
+                       <p className="font-semibold text-[13px] text-[#0F172A] mt-1">{selectedAsset.purch}</p>
+                    </div>
+                    <div className="bg-slate-50 p-3 rounded-[10px] border border-[#E8ECF0]">
+                       <p className="text-[10px] uppercase font-bold text-slate-400">Cost</p>
+                       <p className="font-semibold text-[13px] text-[#0F172A] mt-1">{selectedAsset.cost}</p>
+                    </div>
+                    <div className="bg-slate-50 p-3 rounded-[10px] border border-[#E8ECF0]">
+                       <p className="text-[10px] uppercase font-bold text-slate-400">Total Hrs</p>
+                       <p className="font-semibold text-[13px] text-[#0F172A] mt-1">{selectedAsset.hours}</p>
+                    </div>
+                 </div>
+
+                 <div>
+                   <h4 className="text-[13px] font-bold text-slate-500 uppercase tracking-wider mb-3">7-Day Usage Log</h4>
+                   <div className="h-[200px] border border-[#E8ECF0] rounded-[12px] p-2 bg-white">
+                     <AssetUsageChart data={usageLogs} />
+                   </div>
+                 </div>
+
+                 <div>
+                    <h4 className="text-[13px] font-bold text-slate-500 uppercase tracking-wider mb-3 flex justify-between items-center">
+                       Maintenance History
+                       <Button 
+                         variant="ghost" 
+                         className="h-6 text-[#0066FF] hover:bg-blue-50 hover:text-[#0066FF] text-[11px] px-2 rounded-[6px]"
+                         onClick={() => {
+                           setIsAddMaintOpen(true);
+                         }}
+                       >
+                         <Plus className="w-3 h-3 mr-1"/> Log
+                       </Button>
+                    </h4>
+                    {isMaintLogsLoading ? (
+                      <div className="flex items-center justify-center py-8">
+                        <Loader2 className="animate-spin w-5 h-5 text-[#0066FF]" />
+                      </div>
+                    ) : activeMaintLogs.length > 0 ? (
+                      <div className="divide-y divide-[#E8ECF0] border border-[#E8ECF0] rounded-[12px] bg-white text-[13px]">
+                        {activeMaintLogs.map((m, idx) => (
+                          <div key={m.id || idx} className="p-3 hover:bg-slate-50 transition-colors">
+                            <div className="flex justify-between items-start mb-1">
+                              <span className="font-bold text-[#0F172A]">{m.service_type}</span>
+                              <span className="font-bold text-[#0066FF]">₹{Number(m.cost).toLocaleString('en-IN')}</span>
+                            </div>
+                            <div className="text-[11px] text-slate-500 mb-1.5">
+                              {new Date(m.service_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} | By: {m.serviced_by}
+                            </div>
+                            {m.notes && <p className="text-slate-600 text-[12px] leading-relaxed">{m.notes}</p>}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-slate-400 border border-dashed border-slate-200 rounded-[12px] text-xs">
+                        No maintenance records logged for this equipment.
+                      </div>
+                    )}
+                  </div>
+                 
+                 <div className="pt-4 border-t border-[#E8ECF0] flex gap-3">
+                    {selectedAsset.status === 'Active' ? (
+                      <Button className="flex-1 bg-amber-500 hover:bg-amber-600 text-white rounded-[8px] font-bold" onClick={() => handleStatusChange(selectedAsset.id, 'Maintenance')}>Send to Maintenance</Button>
+                    ) : (
+                      <Button className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white rounded-[8px] font-bold" onClick={() => handleStatusChange(selectedAsset.id, 'Active')}>Mark as Active</Button>
+                    )}
+                 </div>
+              </div>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

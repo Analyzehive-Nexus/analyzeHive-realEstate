@@ -31,12 +31,48 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
 
-import { 
-  PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend,
-  BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  RadialBarChart, RadialBar,
-  AreaChart, Area
-} from "recharts";
+import dynamic from "next/dynamic";
+
+const StockSummaryChart = dynamic(
+  () => import("./components/construction-charts").then((mod) => mod.StockSummaryChart),
+  {
+    ssr: false,
+    loading: () => <div className="h-[240px] w-full bg-slate-50 animate-pulse rounded-2xl flex items-center justify-center text-xs text-slate-400">Loading stock summary...</div>
+  }
+);
+
+const CompletionVelocityChart = dynamic(
+  () => import("./components/construction-charts").then((mod) => mod.CompletionVelocityChart),
+  {
+    ssr: false,
+    loading: () => <div className="h-[320px] w-full bg-slate-50 animate-pulse rounded-2xl flex items-center justify-center text-xs text-slate-400">Loading velocity chart...</div>
+  }
+);
+
+const LabourAttendanceChart = dynamic(
+  () => import("./components/construction-charts").then((mod) => mod.LabourAttendanceChart),
+  {
+    ssr: false,
+    loading: () => <div className="h-40 w-40 rounded-full bg-slate-50 animate-pulse flex items-center justify-center text-xs text-slate-400 font-bold">Loading attendance...</div>
+  }
+);
+
+const WeeklyLabourAvailabilityChart = dynamic(
+  () => import("./components/construction-charts").then((mod) => mod.WeeklyLabourAvailabilityChart),
+  {
+    ssr: false,
+    loading: () => <div className="h-[260px] w-full bg-slate-50 animate-pulse rounded-2xl flex items-center justify-center text-xs text-slate-400 font-bold">Loading availability...</div>
+  }
+);
+
+const ExpenditureAnalysisChart = dynamic(
+  () => import("./components/construction-charts").then((mod) => mod.ExpenditureAnalysisChart),
+  {
+    ssr: false,
+    loading: () => <div className="h-[380px] w-full bg-slate-50 animate-pulse rounded-2xl flex items-center justify-center text-xs text-slate-400 font-bold">Loading expenditure analysis...</div>
+  }
+);
+
 
 // FORMAT HELPER
 const formatCur = (val: number) => `₹${(val / 100000).toFixed(1)}L`;
@@ -545,30 +581,7 @@ export default function ConstructionClient({
         <div className="lg:col-span-2 flex flex-col">
           <SectionHeading title="Stock Summary" />
           <PearlCard className="flex-1 flex flex-col p-6 items-center justify-center">
-            <div className="h-[240px] w-full relative">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={stockSummaryChart}
-                    innerRadius={70}
-                    outerRadius={90}
-                    paddingAngle={3}
-                    dataKey="value"
-                    stroke="none"
-                  >
-                    {stockSummaryChart.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.fill} />
-                    ))}
-                  </Pie>
-                  <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }} />
-                  <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '12px', fontWeight: 600, color: '#64748B' }} />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="absolute inset-0 flex flex-col items-center justify-center -mt-8 pointer-events-none">
-                <span className="text-3xl font-bold text-[#0F172A]">{localInventoryStats?.total || 0}</span>
-                <span className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Total Items</span>
-              </div>
-            </div>
+            <StockSummaryChart stockSummaryChart={stockSummaryChart} totalItems={localInventoryStats?.total || 0} />
             
             <div className="grid grid-cols-3 gap-2 w-full mt-4">
               <div className="bg-[#10B981]/10 rounded-xl p-3 flex flex-col items-center border border-[#10B981]/20">
@@ -659,14 +672,14 @@ export default function ConstructionClient({
                     <div className={`h-12 w-12 rounded-[12px] flex items-center justify-center ${ast.status === 'Active' ? 'bg-emerald-50 text-emerald-600' : 'bg-orange-50 text-orange-600'}`}>
                       <Truck className="h-6 w-6" />
                     </div>
-                    <Badge variant="outline" className="text-[10px] rounded-full uppercase font-bold text-slate-500 bg-slate-50 border-slate-200">{ast.category}</Badge>
+                    <Badge variant="outline" className="text-[10px] rounded-full uppercase font-bold text-slate-500 bg-slate-50 border-slate-200">{ast.asset_type || ast.category || 'General'}</Badge>
                   </div>
-                  <h3 className="text-lg font-bold text-[#0F172A] leading-tight mb-1">{ast.name}</h3>
+                  <h3 className="text-lg font-bold text-[#0F172A] leading-tight mb-1">{ast.name || ast.asset_name || 'Unnamed Asset'}</h3>
                   <p className="text-xs text-slate-400 font-mono mb-4">{ast.id?.substring(0,8) || 'N/A'}</p>
                   <div className="flex justify-between items-end border-t border-[#E8ECF0] pt-4">
                     <div>
                       <p className="text-[10px] text-slate-400 uppercase font-bold">Location</p>
-                      <p className="text-[13px] font-semibold text-[#0F172A]">{ast.location || 'Unknown'}</p>
+                      <p className="text-[13px] font-semibold text-[#0F172A]">{ast.location || ast.current_location || 'Unknown'}</p>
                     </div>
                     <Badge className={`shadow-none text-[9px] uppercase font-bold ${statColor} text-white`}>{ast.status || 'Unknown'}</Badge>
                   </div>
@@ -719,17 +732,7 @@ export default function ConstructionClient({
         <div className="flex flex-col">
           <SectionHeading title="7-Day Completion Velocity" href="/construction/progress" />
           <PearlCard className="flex-1 p-6">
-            <ResponsiveContainer width="100%" height={320}>
-              <BarChart data={progressChart} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E8ECF0" />
-                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} tickFormatter={(val)=>`${val}%`} />
-                <Tooltip cursor={{ fill: '#F8FAFC' }} contentStyle={{ borderRadius: '12px', border: '1px solid #E8ECF0', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }} />
-                <Legend verticalAlign="top" height={36} iconType="circle" wrapperStyle={{ fontSize: '13px', fontWeight: 600, color: '#0F172A' }} />
-                <Bar dataKey="TowerA" name="Tower A" fill="#0066FF" radius={[4, 4, 0, 0]} barSize={24} />
-                <Bar dataKey="TowerB" name="Tower B" fill="#F59E0B" radius={[4, 4, 0, 0]} barSize={24} />
-              </BarChart>
-            </ResponsiveContainer>
+            <CompletionVelocityChart progressChart={progressChart} />
           </PearlCard>
         </div>
       </section>
@@ -739,17 +742,7 @@ export default function ConstructionClient({
         <div className="flex flex-col">
           <SectionHeading title="Today's Labour Attendance" href="/construction/labour" />
           <PearlCard className="flex-1 p-6 flex items-center gap-8">
-            <div className="relative h-40 w-40 shrink-0">
-              <ResponsiveContainer width="100%" height="100%">
-                <RadialBarChart innerRadius="70%" outerRadius="100%" data={[{ value: presentPercent, fill: '#6366F1' }]} startAngle={90} endAngle={-270}>
-                  <RadialBar background={{ fill: '#E8ECF0' }} dataKey="value" cornerRadius={20} />
-                </RadialBarChart>
-              </ResponsiveContainer>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-3xl font-bold text-[#0F172A]">{presentPercent}%</span>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Present</span>
-              </div>
-            </div>
+            <LabourAttendanceChart presentPercent={presentPercent} />
             <div className="flex-1">
               <ResponsiveTable>
                 <Table>
@@ -776,21 +769,7 @@ export default function ConstructionClient({
         <div className="flex flex-col">
           <SectionHeading title="Weekly Labour Availability" href="/construction/labour" />
           <PearlCard className="flex-1 p-6">
-            <ResponsiveContainer width="100%" height={260}>
-              <AreaChart data={attendanceTrend} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#0066FF" stopOpacity={0.15}/>
-                    <stop offset="95%" stopColor="#0066FF" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E8ECF0" />
-                <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} />
-                <Tooltip contentStyle={{ borderRadius: '12px', border: '1px solid #E8ECF0', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }} />
-                <Area type="monotone" dataKey="count" stroke="#0066FF" strokeWidth={3} fillOpacity={1} fill="url(#colorCount)" dot={{ r: 4, fill: '#0066FF', strokeWidth: 2, stroke: '#FFFFFF' }} activeDot={{ r: 6 }} />
-              </AreaChart>
-            </ResponsiveContainer>
+            <WeeklyLabourAvailabilityChart attendanceTrend={attendanceTrend} />
           </PearlCard>
         </div>
       </section>
@@ -922,17 +901,7 @@ export default function ConstructionClient({
         <div className="flex flex-col">
           <SectionHeading title="Expenditure Analysis (Lakhs)" href="/construction/budget" />
           <PearlCard className="flex-1 p-6">
-            <ResponsiveContainer width="100%" height={380}>
-              <BarChart data={budgetData.map(d => ({ ...d, b: d.b/100000, s: d.s/100000 }))} layout="vertical" margin={{ top: 0, right: 30, left: 20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#E8ECF0" />
-                <YAxis dataKey="cat" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748B' }} width={90} />
-                <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748B' }} tickFormatter={(val)=>`₹${val}L`} />
-                <Tooltip cursor={{ fill: '#F8FAFC' }} contentStyle={{ borderRadius: '12px', border: '1px solid #E8ECF0', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }} formatter={(val: number) => `₹${val.toFixed(1)}L`} />
-                <Legend verticalAlign="top" align="right" height={36} iconType="circle" wrapperStyle={{ fontSize: '11px', fontWeight: 600, color: '#0F172A' }} />
-                <Bar dataKey="b" name="Budgeted" fill="#0066FF" radius={[0, 4, 4, 0]} barSize={12} />
-                <Bar dataKey="s" name="Spent" fill="#F59E0B" radius={[0, 4, 4, 0]} barSize={12} />
-              </BarChart>
-            </ResponsiveContainer>
+            <ExpenditureAnalysisChart budgetData={budgetData} />
           </PearlCard>
         </div>
       </section>

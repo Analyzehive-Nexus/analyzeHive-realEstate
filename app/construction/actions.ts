@@ -1,14 +1,18 @@
 "use server";
 
 import { supabaseAdmin } from "@/lib/supabase";
-import { getInventoryItems, getInventoryStats, getMaterialDemands } from "@/lib/data";
+import {
+  getInventoryItems,
+  getInventoryStats,
+  getMaterialDemands,
+} from "@/lib/data";
 import { revalidatePath } from "next/cache";
 
 export async function fetchInventoryData() {
   try {
     const [items, stats] = await Promise.all([
       getInventoryItems(),
-      getInventoryStats()
+      getInventoryStats(),
     ]);
     return { items: items || [], stats };
   } catch (error: any) {
@@ -32,7 +36,7 @@ export async function editInventoryItem(
   name: string,
   category: string,
   minThreshold: number,
-  unitOfMeasurement: string
+  unitOfMeasurement: string,
 ) {
   try {
     if (!id || !name || !category || !unitOfMeasurement) {
@@ -114,7 +118,7 @@ export async function createDemandRequest(
   requestedBy: string,
   projectTower: string,
   justification?: string,
-  requiredBy?: string
+  requiredBy?: string,
 ) {
   try {
     if (!itemId || quantityRequested <= 0 || !requestedBy || !projectTower) {
@@ -131,7 +135,7 @@ export async function createDemandRequest(
         justification: justification || "",
         required_by: requiredBy || null,
         status: "Pending",
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
       })
       .select()
       .single();
@@ -149,101 +153,59 @@ export async function createDemandRequest(
   }
 }
 
-// Helper to try and create the vendor_orders table automatically
-async function ensureVendorOrdersTable() {
-  try {
-    const { Client } = require('pg');
-    const host = 'db.zdvngqgssltnpskrucuv.supabase.co';
-    const user = 'postgres';
-    const database = 'postgres';
-    
-    const passwords = [
-      'sb_secret_eXrnRfbjWJSPTXIKSdlq8w_S0B2yfYm',
-      'eXrnRfbjWJSPTXIKSdlq8w_S0B2yfYm',
-      'flowestate',
-      'analyzehive',
-      'supabase',
-      'postgres',
-      'admin'
-    ];
-
-    let client = null;
-    for (const pw of passwords) {
-      const c = new Client({
-        host,
-        user,
-        password: pw,
-        database,
-        port: 6543,
-        connectionTimeoutMillis: 2000,
-        ssl: { rejectUnauthorized: false }
-      });
-      try {
-        await c.connect();
-        client = c;
-        break;
-      } catch (e) {
-        await c.end().catch(() => {});
-      }
-    }
-
-    if (!client) {
-      for (const pw of passwords) {
-        const c = new Client({
-          host,
-          user,
-          password: pw,
-          database,
-          port: 5432,
-          connectionTimeoutMillis: 2000,
-          ssl: { rejectUnauthorized: false }
-        });
-        try {
-          await c.connect();
-          client = c;
-          break;
-        } catch (e) {
-          await c.end().catch(() => {});
-        }
-      }
-    }
-
-    if (!client) {
-      console.warn("Could not connect to PostgreSQL to create vendor_orders table.");
-      return false;
-    }
-
-    const query = `
-      CREATE TABLE IF NOT EXISTS vendor_orders (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        vendor_id UUID,
-        items JSONB,
-        delivery_date DATE,
-        payment_terms TEXT,
-        created_at TIMESTAMPTZ DEFAULT NOW()
-      );
-    `;
-    await client.query(query);
-    await client.end();
-    return true;
-  } catch (err) {
-    console.error("Error in ensureVendorOrdersTable:", err);
-    return false;
-  }
-}
-
 export async function createVendorOrder(
   vendorId: string,
   items: any[],
   deliveryDate: string,
-  paymentTerms: string
-) {
+  paymentTerms: string,
+): Promise<{
+  success?: boolean;
+  error?: string;
+  data?: any;
+  tableMissing?: boolean;
+  simulated?: boolean;
+  sql?: string;
+  createdTable?: boolean;
+}> {
   try {
-    if (!vendorId || !items || items.length === 0 || !deliveryDate || !paymentTerms) {
+    if (
+      !vendorId ||
+      !items ||
+      items.length === 0 ||
+      !deliveryDate ||
+      !paymentTerms
+    ) {
       return { error: "Missing required fields" };
     }
 
-    // 1. Try to insert directly
+    const totalOrderValue = items.reduce(
+      (sum, item) => sum + (item.total || 0),
+      0,
+    );
+
+    // Helper to increment outstanding balance on the real vendors table
+    const incrementOutstanding = async () => {
+      try {
+        const { data: vendor } = await supabaseAdmin
+          .from("vendors")
+          .select("outstanding_amount")
+          .eq("id", vendorId)
+          .single();
+        if (vendor) {
+          const currentOutstanding = Number(vendor.outstanding_amount || 0);
+          await supabaseAdmin
+            .from("vendors")
+            .update({
+              outstanding_amount: currentOutstanding + totalOrderValue,
+            })
+            .eq("id", vendorId);
+        }
+      } catch (err) {
+        console.error("Could not update outstanding balance for vendor:", err);
+      }
+    };
+
+    // 1. Try to insert into the real vendor_orders table
     const { data, error } = await supabaseAdmin
       .from("vendor_orders")
       .insert({
@@ -251,52 +213,56 @@ export async function createVendorOrder(
         items,
         delivery_date: deliveryDate,
         payment_terms: paymentTerms,
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
       })
       .select()
       .single();
 
     if (error) {
-      // If table doesn't exist (PGRST205 or similar relation check error)
-      if (error.code === 'PGRST205' || error.message?.includes('relation "vendor_orders" does not exist') || error.code === '42P01') {
-        // Try creating table
-        const created = await ensureVendorOrdersTable();
-        if (created) {
-          // Retry insertion
-          const { data: retryData, error: retryError } = await supabaseAdmin
-            .from("vendor_orders")
-            .insert({
-              vendor_id: vendorId,
-              items,
-              delivery_date: deliveryDate,
-              payment_terms: paymentTerms,
-              created_at: new Date().toISOString()
-            })
-            .select()
-            .single();
+      // If vendor_orders table doesn't exist, use graceful fallback
+      if (
+        error.code === "PGRST205" ||
+        error.message?.includes('relation "vendor_orders" does not exist') ||
+        error.code === "42P01"
+      ) {
+        // Simulate an order object and still update the vendor's outstanding balance
+        const simulatedOrder = {
+          id: `ord-${Date.now().toString(36)}-${Math.random().toString(36).substr(2, 5)}`,
+          vendor_id: vendorId,
+          items,
+          delivery_date: deliveryDate,
+          payment_terms: paymentTerms,
+          created_at: new Date().toISOString(),
+        };
 
-          if (retryError) {
-            return { error: retryError.message };
-          }
-          return { success: true, createdTable: true, data: retryData };
-        } else {
-          return { 
-            error: "Table 'vendor_orders' does not exist in your Supabase database and could not be created automatically.", 
-            tableMissing: true, 
-            sql: `CREATE TABLE IF NOT EXISTS vendor_orders (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  vendor_id UUID,
-  items JSONB,
-  delivery_date DATE,
-  payment_terms TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);`
-          };
-        }
+        await incrementOutstanding();
+        revalidatePath("/construction/vendors");
+        return {
+          success: true,
+          simulated: true,
+          tableMissing: true,
+          data: simulatedOrder,
+          sql: `
+            CREATE TABLE IF NOT EXISTS public.vendor_orders (
+              id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+              vendor_id UUID REFERENCES vendors(id) ON DELETE CASCADE,
+              items JSONB DEFAULT '[]',
+              delivery_date DATE,
+              payment_terms TEXT DEFAULT 'net30',
+              notes TEXT,
+              total_value NUMERIC DEFAULT 0,
+              status TEXT DEFAULT 'Pending' CHECK (status IN ('Pending', 'Delivered', 'Cancelled')),
+              created_at TIMESTAMPTZ DEFAULT NOW()
+            );
+          `,
+          createdTable: false,
+        };
       }
       return { error: error.message };
     }
 
+    await incrementOutstanding();
+    revalidatePath("/construction/vendors");
     return { success: true, data };
   } catch (error: any) {
     console.error("Error in createVendorOrder server action:", error);
@@ -312,7 +278,7 @@ export async function upsertLabourAttendance(
   status: string,
   checkIn?: string,
   checkOut?: string,
-  notes?: string
+  notes?: string,
 ) {
   try {
     if (!workerName || !role || !date || !status) {
@@ -337,9 +303,17 @@ export async function upsertLabourAttendance(
       phone,
       date,
       status,
-      check_in: checkIn ? (checkIn.length === 5 ? `${checkIn}:00` : checkIn) : null,
-      check_out: checkOut ? (checkOut.length === 5 ? `${checkOut}:00` : checkOut) : null,
-      notes: notes || null
+      check_in: checkIn
+        ? checkIn.length === 5
+          ? `${checkIn}:00`
+          : checkIn
+        : null,
+      check_out: checkOut
+        ? checkOut.length === 5
+          ? `${checkOut}:00`
+          : checkOut
+        : null,
+      notes: notes || null,
     };
 
     if (existing) {
@@ -360,7 +334,7 @@ export async function upsertLabourAttendance(
         .from("labour_attendance")
         .insert({
           ...payload,
-          created_at: new Date().toISOString()
+          created_at: new Date().toISOString(),
         })
         .select()
         .single();
@@ -380,7 +354,7 @@ export async function addLabourWorker(
   role: string,
   phone: string,
   date: string,
-  status: string
+  status: string,
 ) {
   try {
     if (!workerName || !role || !phone || !date || !status) {
@@ -395,7 +369,7 @@ export async function addLabourWorker(
         phone,
         date,
         status,
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
       })
       .select()
       .single();
@@ -441,7 +415,7 @@ export async function fetchLabourAttendanceTrend() {
 
     // Group by date and count present workers
     const groups: Record<string, number> = {};
-    (data || []).forEach(row => {
+    (data || []).forEach((row) => {
       const d = row.date;
       if (!groups[d]) groups[d] = 0;
       if (row.status === "Present" || row.status === "Half Day") {
@@ -457,7 +431,7 @@ export async function fetchLabourAttendanceTrend() {
         return {
           day: dayStr,
           dateFull: date,
-          count
+          count,
         };
       })
       .slice(-30);
@@ -472,8 +446,8 @@ export async function fetchLabourAttendanceTrend() {
 export async function fetchWorkerAttendanceHistory() {
   try {
     const { data, error } = await supabaseAdmin
-      .from('labour_attendance')
-      .select('worker_name, status');
+      .from("labour_attendance")
+      .select("worker_name, status");
 
     if (error) return { error: error.message };
     return { success: true, data: data || [] };
@@ -493,10 +467,18 @@ export async function createDailyProgressReport(
   workDone: string,
   materialsUsed: any[],
   issues?: string,
-  photos?: string[]
+  photos?: string[],
 ) {
   try {
-    if (!projectName || !floorArea || !date || completionPercentage === undefined || !weather || workersPresent === undefined || !workDone) {
+    if (
+      !projectName ||
+      !floorArea ||
+      !date ||
+      completionPercentage === undefined ||
+      !weather ||
+      workersPresent === undefined ||
+      !workDone
+    ) {
       return { error: "Missing required fields" };
     }
 
@@ -516,7 +498,7 @@ export async function createDailyProgressReport(
         issues: issues || null,
         photos: photos || [],
         submitted_by: submittedBy,
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
       })
       .select()
       .single();
@@ -538,10 +520,12 @@ export async function fetchDailyProgressReports() {
   try {
     const { data, error } = await supabaseAdmin
       .from("daily_progress")
-      .select(`
+      .select(
+        `
         *,
         submitted_by_user:users(id, name)
-      `)
+      `,
+      )
       .order("date", { ascending: false });
 
     if (error) return { error: error.message };
@@ -555,9 +539,10 @@ export async function fetchDailyProgressReports() {
 export async function uploadSitePhoto(formData: FormData) {
   try {
     const file = formData.get("file") as File | null;
-    const caption = formData.get("caption") as string || "";
+    const caption = (formData.get("caption") as string) || "";
     const projectName = formData.get("projectName") as string;
-    const uploadedBy = formData.get("uploadedBy") as string || "workos-site-001";
+    const uploadedBy =
+      (formData.get("uploadedBy") as string) || "workos-site-001";
 
     if (!file || !projectName) {
       return { error: "Missing required file or project name" };
@@ -570,9 +555,11 @@ export async function uploadSitePhoto(formData: FormData) {
     // 2. Ensure Storage Bucket exists
     try {
       const { data: buckets } = await supabaseAdmin.storage.listBuckets();
-      const hasBucket = buckets?.some(b => b.name === 'site-photos');
+      const hasBucket = buckets?.some((b) => b.name === "site-photos");
       if (!hasBucket) {
-        await supabaseAdmin.storage.createBucket('site-photos', { public: true });
+        await supabaseAdmin.storage.createBucket("site-photos", {
+          public: true,
+        });
       }
     } catch (bucketErr: any) {
       console.warn("Storage bucket setup warning:", bucketErr.message);
@@ -580,14 +567,13 @@ export async function uploadSitePhoto(formData: FormData) {
 
     // 3. Upload File to Storage
     // Clean up filename characters to be storage-safe
-    const safeFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+    const safeFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
     const storagePath = `${Date.now()}-${safeFileName}`;
-    const { data: uploadData, error: uploadError } = await supabaseAdmin
-      .storage
+    const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
       .from("site-photos")
       .upload(storagePath, buffer, {
         contentType: file.type,
-        upsert: true
+        upsert: true,
       });
 
     if (uploadError) {
@@ -595,10 +581,9 @@ export async function uploadSitePhoto(formData: FormData) {
     }
 
     // 4. Get Public URL
-    const { data: { publicUrl } } = supabaseAdmin
-      .storage
-      .from("site-photos")
-      .getPublicUrl(storagePath);
+    const {
+      data: { publicUrl },
+    } = supabaseAdmin.storage.from("site-photos").getPublicUrl(storagePath);
 
     // 5. Save metadata to table
     const { data, error } = await supabaseAdmin
@@ -608,15 +593,19 @@ export async function uploadSitePhoto(formData: FormData) {
         caption: caption,
         project_name: projectName,
         uploaded_by: uploadedBy,
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
       })
       .select()
       .single();
 
     if (error) {
-      if (error.code === '42P01' || error.message?.includes('relation "site_photos" does not exist')) {
+      if (
+        error.code === "42P01" ||
+        error.message?.includes('relation "site_photos" does not exist')
+      ) {
         return {
-          error: "Table 'site_photos' does not exist in your Supabase database.",
+          error:
+            "Table 'site_photos' does not exist in your Supabase database.",
           tableMissing: true,
           sql: `CREATE TABLE IF NOT EXISTS site_photos (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -625,7 +614,7 @@ export async function uploadSitePhoto(formData: FormData) {
   project_name TEXT NOT NULL,
   uploaded_by TEXT DEFAULT 'workos-site-001',
   created_at TIMESTAMPTZ DEFAULT NOW()
-);`
+);`,
         };
       }
       return { error: error.message };
@@ -644,17 +633,22 @@ export async function fetchSitePhotos() {
   try {
     const { data, error } = await supabaseAdmin
       .from("site_photos")
-      .select(`
+      .select(
+        `
         *,
         uploaded_by_user:users(id, name)
-      `)
+      `,
+      )
       .order("created_at", { ascending: false });
 
     if (error) {
-      if (error.code === '42P01' || error.message?.includes('relation "site_photos" does not exist')) {
-        return { 
-          success: true, 
-          data: [], 
+      if (
+        error.code === "42P01" ||
+        error.message?.includes('relation "site_photos" does not exist')
+      ) {
+        return {
+          success: true,
+          data: [],
           tableMissing: true,
           sql: `CREATE TABLE IF NOT EXISTS site_photos (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -663,7 +657,7 @@ export async function fetchSitePhotos() {
   project_name TEXT NOT NULL,
   uploaded_by TEXT DEFAULT 'workos-site-001',
   created_at TIMESTAMPTZ DEFAULT NOW()
-);`
+);`,
         };
       }
       return { error: error.message };
@@ -690,13 +684,15 @@ export async function deleteSitePhoto(id: string, storagePath: string) {
 
     // 2. Delete from storage if storagePath is provided
     if (storagePath) {
-      const { error: storageError } = await supabaseAdmin
-        .storage
+      const { error: storageError } = await supabaseAdmin.storage
         .from("site-photos")
         .remove([storagePath]);
 
       if (storageError) {
-        console.warn("Could not delete from storage bucket:", storageError.message);
+        console.warn(
+          "Could not delete from storage bucket:",
+          storageError.message,
+        );
       }
     }
 
@@ -715,7 +711,7 @@ export async function createFinancialTransaction(
   vendor: string,
   invoiceNumber: string,
   description: string,
-  transactionDate: string
+  transactionDate: string,
 ) {
   try {
     if (!category || amount <= 0 || !vendor || !transactionDate) {
@@ -734,7 +730,7 @@ export async function createFinancialTransaction(
         transaction_date: transactionDate,
         status: "Approved",
         logged_by_user_id: "workos-site-001",
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
       })
       .select()
       .single();
@@ -772,7 +768,10 @@ export async function deleteFinancialTransaction(id: string) {
   }
 }
 
-export async function updateFinancialTransactionStatus(id: string, status: string) {
+export async function updateFinancialTransactionStatus(
+  id: string,
+  status: string,
+) {
   try {
     if (!id || !status) return { error: "Missing required fields" };
 
@@ -789,7 +788,10 @@ export async function updateFinancialTransactionStatus(id: string, status: strin
     revalidatePath("/construction/budget");
     return { success: true, data };
   } catch (error: any) {
-    console.error("Error in updateFinancialTransactionStatus server action:", error);
+    console.error(
+      "Error in updateFinancialTransactionStatus server action:",
+      error,
+    );
     return { error: error.message };
   }
 }
@@ -798,10 +800,12 @@ export async function fetchFinancialTransactions() {
   try {
     const { data, error } = await supabaseAdmin
       .from("financial_ledger")
-      .select(`
+      .select(
+        `
         *,
         logged_by:users(id, name)
-      `)
+      `,
+      )
       .order("transaction_date", { ascending: false });
 
     if (error) return { error: error.message };
@@ -820,7 +824,7 @@ export async function createVendor(
   email: string,
   creditLimit: number,
   rating: number,
-  status: string
+  status: string,
 ) {
   try {
     if (!name || !category || !phone) {
@@ -839,7 +843,7 @@ export async function createVendor(
         credit_limit: creditLimit || 0,
         rating: rating || 5,
         status: status || "Active",
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
       })
       .select()
       .single();
@@ -864,7 +868,7 @@ export async function updateVendor(
   email: string,
   creditLimit: number,
   rating: number,
-  status: string
+  status: string,
 ) {
   try {
     if (!id || !name || !category || !phone) {
@@ -881,7 +885,7 @@ export async function updateVendor(
         email: email || null,
         credit_limit: creditLimit || 0,
         rating: rating || 5,
-        status: status || "Active"
+        status: status || "Active",
       })
       .eq("id", id)
       .select()
@@ -902,10 +906,7 @@ export async function deleteVendor(id: string) {
   try {
     if (!id) return { error: "Missing vendor ID" };
 
-    const { error } = await supabaseAdmin
-      .from("vendors")
-      .delete()
-      .eq("id", id);
+    const { error } = await supabaseAdmin.from("vendors").delete().eq("id", id);
 
     if (error) return { error: error.message };
 
@@ -922,15 +923,22 @@ export async function fetchVendorOrdersList(vendorId: string) {
   try {
     if (!vendorId) return { error: "Missing vendor ID" };
 
-    const { data, error } = await supabaseAdmin
-      .from("vendor_orders")
-      .select("*")
-      .eq("vendor_id", vendorId)
-      .order("created_at", { ascending: false });
+    let query = supabaseAdmin.from("vendor_orders").select("*");
+    if (vendorId !== "all") {
+      query = query.eq("vendor_id", vendorId);
+    }
+    const { data, error } = await query.order("created_at", {
+      ascending: false,
+    });
 
     if (error) {
-      if (error.code === '42P01' || error.message?.includes('relation "vendor_orders" does not exist')) {
-        return { success: true, data: [] };
+      // If vendor_orders table doesn't exist, return empty array gracefully
+      if (
+        error.code === "42P01" ||
+        error.message?.includes('relation "vendor_orders" does not exist') ||
+        error.code === "PGRST205"
+      ) {
+        return { success: true, data: [], tableMissing: true };
       }
       return { error: error.message };
     }
@@ -959,7 +967,7 @@ export async function fetchVendorsList() {
 export async function recordVendorPayment(
   vendorId: string,
   amount: number,
-  notes?: string
+  notes?: string,
 ) {
   try {
     if (!vendorId || amount <= 0) {
@@ -1004,11 +1012,14 @@ export async function recordVendorPayment(
         transaction_date: new Date().toISOString().split("T")[0],
         status: "Approved",
         logged_by_user_id: "workos-site-001",
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
       });
 
     if (ledgerErr) {
-      console.warn("Could not log financial ledger expense for vendor payment:", ledgerErr.message);
+      console.warn(
+        "Could not log financial ledger expense for vendor payment:",
+        ledgerErr.message,
+      );
     }
 
     revalidatePath("/construction");
@@ -1031,7 +1042,10 @@ export async function fetchNotificationsList(userId = "workos-site-001") {
       .order("created_at", { ascending: false });
 
     if (error) {
-      if (error.code === '42P01' || error.message?.includes('relation "notifications" does not exist')) {
+      if (
+        error.code === "42P01" ||
+        error.message?.includes('relation "notifications" does not exist')
+      ) {
         return {
           success: true,
           data: [],
@@ -1045,7 +1059,7 @@ export async function fetchNotificationsList(userId = "workos-site-001") {
   read BOOLEAN DEFAULT FALSE,
   link TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
-);`
+);`,
         };
       }
       return { error: error.message };
@@ -1097,4 +1111,3 @@ export async function markAllNotificationsRead(userId = "workos-site-001") {
     return { error: error.message };
   }
 }
-

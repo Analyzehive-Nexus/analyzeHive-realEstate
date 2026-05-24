@@ -65,10 +65,52 @@ export async function GET(req: NextRequest) {
       maxAge: 60 * 60 * 24 * 7,
     });
 
+    // Check if onboarding is completed by looking for a company record in the database
+    let hasCompany = false;
+    try {
+      const { data: companyRecord } = await supabaseAdmin
+        .from('companies')
+        .select('id, name, city, logo')
+        .eq('user_id', userId)
+        .limit(1)
+        .maybeSingle();
+
+      if (companyRecord) {
+        hasCompany = true;
+        // Populate company branding cookies so sidebars load branding instantly
+        cookieStore.set('company_name', companyRecord.name, {
+          path: '/',
+          maxAge: 60 * 60 * 24 * 7,
+          sameSite: 'lax',
+          secure: process.env.NODE_ENV === 'production'
+        });
+        cookieStore.set('company_city', companyRecord.city, {
+          path: '/',
+          maxAge: 60 * 60 * 24 * 7,
+          sameSite: 'lax',
+          secure: process.env.NODE_ENV === 'production'
+        });
+        if (companyRecord.logo) {
+          cookieStore.set('company_logo', companyRecord.logo, {
+            path: '/',
+            maxAge: 60 * 60 * 24 * 7,
+            sameSite: 'lax',
+            secure: process.env.NODE_ENV === 'production'
+          });
+        }
+      }
+    } catch (e) {
+      console.warn("Could not query companies table during callback:", e);
+    }
+
     let redirectPath = '/dashboard';
-    if (role === 'VP_SALES' || role === 'BROKER') redirectPath = '/sales';
-    if (role === 'SITE_MANAGER' || role === 'ADMIN') redirectPath = '/construction';
-    if (role === 'MD') redirectPath = '/command-center';
+    if (!hasCompany) {
+      redirectPath = '/onboarding';
+    } else {
+      if (role === 'VP_SALES' || role === 'BROKER') redirectPath = '/sales';
+      if (role === 'SITE_MANAGER' || role === 'ADMIN') redirectPath = '/construction';
+      if (role === 'MD') redirectPath = '/command-center';
+    }
 
     return NextResponse.redirect(new URL(redirectPath, req.url));
   } catch (error) {

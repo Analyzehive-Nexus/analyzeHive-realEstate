@@ -64,3 +64,24 @@ export async function updateLeadStatusAction(id: string, status: string) {
   revalidatePath("/sales/leads")
   return { success: true }
 }
+
+export async function deleteLeadAction(id: string) {
+  try {
+    if (!id) return { error: "Missing lead ID" };
+    const { error } = await supabaseAdmin
+      .from("leads_customers")
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      console.error("Failed to delete lead:", error);
+      return { error: error.message };
+    }
+
+    revalidatePath("/sales/leads");
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error in deleteLeadAction:", error);
+    return { error: error.message };
+  }
+}

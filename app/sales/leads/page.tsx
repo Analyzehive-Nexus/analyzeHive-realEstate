@@ -8,6 +8,7 @@ import { SkeletonTable } from "@/components/ui/skeleton-table";
 import { useEffect, useState, useMemo } from 'react';
 import { createBrowserClient } from '@/lib/supabase-browser';
 import { useToast } from '@/components/ui/toast';
+import { deleteLeadAction } from './actions';
 import { 
   Users, UserPlus, PhoneCall, Calendar, CheckCircle2, 
   Search, Download, Plus, Eye, MessageCircle, Edit, Trash2,
@@ -472,13 +473,10 @@ export default function LeadsPage() {
     // Optimistic UI update
     setLeads(prev => prev.filter(l => l.id !== id));
 
-    const { error } = await supabase
-      .from('leads_customers')
-      .delete()
-      .eq('id', id);
+    const res = await deleteLeadAction(id);
 
-    if (error) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    if (res.error) {
+      toast({ title: 'Error', description: res.error, variant: 'destructive' });
       fetchLeads(); // Fallback on error
     } else {
       toast({ title: 'Lead deleted' });

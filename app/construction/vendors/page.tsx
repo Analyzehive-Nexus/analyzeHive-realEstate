@@ -1,19 +1,19 @@
 export const dynamic = 'force-dynamic';
 
 import { getVendors } from '@/lib/data';
-import { supabaseAdmin } from '@/lib/supabase';
+import { fetchVendorOrdersList } from '@/app/construction/actions';
 import VendorsClient from './client';
 
 export default async function VendorsPage() {
-  const [vendors, { data: orders }] = await Promise.all([
+  const [vendors, ordersRes] = await Promise.all([
     getVendors(),
-    supabaseAdmin.from('vendor_orders').select('*')
+    fetchVendorOrdersList("all")
   ]);
 
   return (
     <VendorsClient 
       initialVendors={vendors || []} 
-      initialOrders={orders || []}
+      initialOrders={ordersRes.success ? (ordersRes.data || []) : []}
     />
   );
 }

@@ -114,8 +114,10 @@ export default function VendorsClient({
     if (freshVendors.success && freshVendors.data) {
       setLocalVendors(freshVendors.data);
     }
-    // We can also reload orders by fetching them dynamically
-    const freshOrders = await fetchVendorOrdersList("all"); // logic handles this or skips if not passed
+    const freshOrders = await fetchVendorOrdersList("all");
+    if (freshOrders.success && freshOrders.data) {
+      setLocalOrders(freshOrders.data);
+    }
   };
 
   // Add a new vendor account
@@ -324,7 +326,7 @@ export default function VendorsClient({
     const vendorId = v.id || `VND-10${i+1}`;
     
     // Calculate total orders placed for this vendor
-    const totalOrders = localOrders.filter(o => o.vendor_id === vendorId).length;
+    const totalOrders = localOrders.filter(o => o.vendor_id === vendorId).length || v.total_orders || 0;
 
     return {
       id: vendorId,
