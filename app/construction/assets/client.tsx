@@ -1,27 +1,25 @@
 "use client";
 import { ResponsiveTable } from "@/components/ui/responsive-table";
-
-
-import { useState } from "react"
+import { useState } from "react";
 import { 
   Truck, Search, Filter, Plus, FileDown, Clock, MapPin, Wrench, User,
-  Calendar, RotateCcw, AlertTriangle, CheckCircle, MoreVertical
-} from "lucide-react"
+  Calendar, RotateCcw, AlertTriangle, CheckCircle, MoreVertical, Loader2
+} from "lucide-react";
 
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog"
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/components/ui/toast";
+import { addAsset, updateAssetStatus, assignAsset } from "./actions";
 
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
-
-// Mock array replaced by props
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 const usageLogs = [
   { day: "Mon", hours: 6.5 },
@@ -63,25 +61,169 @@ const InteractivePearlCard = ({ children, className = "" }: { children: React.Re
     {children}
   </Card>
 );
-
-export default function AssetsClient({ initialAssets }: { initialAssets: any[] }) {
+export default function AssetsClient({ 
+  initialAssets,
+  users
+}: { 
+  initialAssets: any[],
+  users: any[]
+}) {
+  const { toast } = useToast();
+  
+  // Real Database Local State
+  const [localAssets, setLocalAssets] = useState<any[]>(initialAssets);
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
 
-  const allAssets = initialAssets.map(a => ({
-    id: a.id?.substring(0,8) || 'Unknown',
-    name: a.asset_name || 'Unnamed Asset',
-    type: a.asset_type || 'General',
-    status: a.status || 'Active',
-    nextService: a.next_maintenance_date ? new Date(a.next_maintenance_date).toLocaleDateString() : '--',
-    assigned: 'Site Team', // Mock for now if no assigned user
-    location: a.current_location || 'Storage',
-    hours: a.total_hours_used || 0,
-    purch: a.purchase_date ? new Date(a.purchase_date).toLocaleDateString() : '--',
-    cost: a.purchase_cost ? `₹${(a.purchase_cost / 100000).toFixed(1)}L` : '--'
-  }));
+  // Modals state
+  const [isAddOpen, setIsAddOpen] = useState(false);
+  const [isAssignOpen, setIsAssignOpen] = useState(false);
+  const [selectedAsset, setSelectedAsset] = useState<any>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const filteredAssets = allAssets.filter(a => a.name.toLowerCase().includes(searchTerm.toLowerCase()));
+  // Form Fields State - Add Asset
+  const [addName, setAddName] = useState("");
+  const [addType, setAddType] = useState("Excavator");
+  const [addSerial, setAddSerial] = useState("");
+  const [addDate, setAddDate] = useState("");
+  const [addCost, setAddCost] = useState("");
+  const [addLocation, setAddLocation] = useState("Storage");
+
+  // Form Fields State - Assign Asset
+  const [assignUserId, setAssignUserId] = useState("unassigned");
+  const [assignLocation, setAssignLocation] = useState("");
+
+  // Re-calculate real-data assets list
+  const allAssets = localAssets.map(a => {
+    // Resolve assigned user name
+    const assignedUser = a.assigned_user?.name || users.find(u => u.id === a.assigned_user_id)?.name || 'Unassigned';
+    
+    return {
+      id: a.id,
+      displayId: a.id?.substring(0, 8) || 'Unknown',
+      name: a.asset_name || 'Unnamed Asset',
+      type: a.asset_type || 'General',
+      status: a.status || 'Active',
+      nextService: a.next_maintenance_date ? new Date(a.next_maintenance_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '--',
+      assigned: assignedUser,
+      assigned_user_id: a.assigned_user_id || '',
+      location: a.current_location || 'Storage',
+      hours: a.total_hours_used || 0,
+      purch: a.purchase_date ? new Date(a.purchase_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '--',
+      cost: a.purchase_cost ? `₹${(a.purchase_cost / 100000).toFixed(1)}L` : '--'
+    };
+  });
+
+  const filteredAssets = allAssets.filter(a => 
+    a.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    a.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    a.location.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // Add Asset Handler
+  const handleAddAsset = async () => {
+    if (!addName.trim() || !addType) {
+      toast({
+        title: "Validation Error",
+        description: "Asset Name and Equipment Type are required.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    const costNum = parseFloat(addCost) || 0;
+    const res = await addAsset(
+      addName,
+      addType,
+      addSerial,
+      addDate,
+      costNum,
+      addLocation
+    );
+    setIsSubmitting(false);
+
+    if (res.error) {
+      toast({ title: "Failed to Add Asset", description: res.error, variant: "destructive" });
+    } else {
+      toast({ title: "Asset Registered", description: "Equipment profile has been successfully saved in database!" });
+      setIsAddOpen(false);
+      resetAddForm();
+      
+      // Update local state reactively
+      if (res.data) {
+        setLocalAssets([res.data, ...localAssets]);
+      }
+    }
+  };
+
+  // Status Change Handler
+  const handleStatusChange = async (assetId: string, newStatus: string) => {
+    if (!assetId) return;
+    
+    // Optimistic UI update
+    const previousAssets = [...localAssets];
+    setLocalAssets(localAssets.map(a => a.id === assetId ? { ...a, status: newStatus } : a));
+
+    const res = await updateAssetStatus(assetId, newStatus);
+    if (res.error) {
+      toast({ title: "Update Failed", description: res.error, variant: "destructive" });
+      setLocalAssets(previousAssets); // rollback
+    } else {
+      toast({ title: "Status Updated", description: `Asset status changed to ${newStatus} successfully.` });
+      if (res.data) {
+        setLocalAssets(localAssets.map(a => a.id === assetId ? res.data : a));
+      }
+    }
+  };
+
+  // Assignment Handler
+  const handleAssignAssetSubmit = async () => {
+    if (!selectedAsset) return;
+    
+    setIsSubmitting(true);
+    const res = await assignAsset(
+      selectedAsset.id,
+      assignUserId === "unassigned" ? null : (assignUserId || null),
+      assignLocation
+    );
+    setIsSubmitting(false);
+
+    if (res.error) {
+      toast({ title: "Assignment Failed", description: res.error, variant: "destructive" });
+    } else {
+      toast({ 
+        title: "Asset Assigned", 
+        description: assignUserId === "unassigned" 
+          ? `Successfully marked ${selectedAsset.name} as unassigned.` 
+          : `Successfully assigned ${selectedAsset.name} to ${users.find(u => u.id === assignUserId)?.name || 'User'} at ${assignLocation}.` 
+      });
+      setIsAssignOpen(false);
+      setAssignUserId("unassigned");
+      setAssignLocation("");
+      
+      // Update local state reactively
+      if (res.data) {
+        setLocalAssets(localAssets.map(a => a.id === selectedAsset.id ? res.data : a));
+      }
+    }
+  };
+
+  const triggerAssignModal = (ast: any) => {
+    setSelectedAsset(ast);
+    setAssignUserId(ast.assigned_user_id || "unassigned");
+    setAssignLocation(ast.location || "Storage");
+    setIsAssignOpen(true);
+  };
+
+  const resetAddForm = () => {
+    setAddName("");
+    setAddType("Excavator");
+    setAddSerial("");
+    setAddDate("");
+    setAddCost("");
+    setAddLocation("Storage");
+  };
 
   return (
     <div className="p-8 max-w-[1800px] mx-auto pb-24 space-y-8 font-sans text-[#0F172A]">
@@ -124,98 +266,125 @@ export default function AssetsClient({ initialAssets }: { initialAssets: any[] }
           <div className="relative w-full max-w-[300px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <Input 
-              placeholder="Search assets..." 
-              className="pl-9 bg-slate-50 border-slate-200 h-10 rounded-[10px]"
+              placeholder="Search assets name, type or location..." 
+              className="pl-9 bg-slate-50 border-slate-200 h-10 rounded-[10px] bg-white"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <Select defaultValue="all">
-            <SelectTrigger className="w-[160px] h-10 bg-slate-50 border-slate-200 rounded-[10px]">
-              <SelectValue placeholder="Type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Types</SelectItem>
-              <SelectItem value="excavator">Excavators</SelectItem>
-              <SelectItem value="crane">Cranes</SelectItem>
-              <SelectItem value="mixer">Mixers</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select defaultValue="all">
-            <SelectTrigger className="w-[140px] h-10 bg-slate-50 border-slate-200 rounded-[10px]">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="maintenance">Maintenance</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
         <div className="flex gap-3">
           <div className="bg-slate-100 p-1 rounded-[10px] flex items-center">
              <Button variant={viewMode === 'grid' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('grid')} className={`h-8 px-3 rounded-[8px] text-[12px] ${viewMode === 'grid' ? 'bg-white text-[#0066FF] shadow-sm font-bold' : 'text-slate-500 font-semibold hover:bg-slate-200/50 hover:text-slate-700'}`}>Grid</Button>
              <Button variant={viewMode === 'table' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('table')} className={`h-8 px-3 rounded-[8px] text-[12px] ${viewMode === 'table' ? 'bg-white text-[#0066FF] shadow-sm font-bold' : 'text-slate-500 font-semibold hover:bg-slate-200/50 hover:text-slate-700'}`}>Table</Button>
           </div>
-          <Dialog>
+          
+          <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
             <DialogTrigger asChild>
-              <Button className="h-10 bg-[#0066FF] hover:bg-[#0052CC] text-white rounded-[10px] shadow-sm flex gap-2 font-bold">
+              <Button className="h-10 bg-[#0066FF] hover:bg-[#0052CC] text-white rounded-[10px] shadow-sm flex gap-2 font-bold" onClick={resetAddForm}>
                 <Plus className="w-4 h-4" /> Add Asset
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px]">
-              <DialogHeader>
-                <DialogTitle>Register New Asset</DialogTitle>
+            <DialogContent className="sm:max-w-[500px] bg-white border border-slate-100 shadow-2xl rounded-[24px]">
+              <DialogHeader className="border-b border-[#F1F5F9] pb-4">
+                <DialogTitle className="text-lg font-bold text-[#0F172A]">Register New Asset</DialogTitle>
+                <p className="text-[11px] text-slate-500 mt-0.5">Save a heavy machinery or tool to the ERP assets registry.</p>
               </DialogHeader>
-              <div className="grid gap-4 py-4">
+              <div className="grid gap-4 py-4 text-left">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Asset Name</Label>
-                    <Input placeholder="e.g. Concrete Pump" className="rounded-[8px]" />
+                  <div className="space-y-1.5 md:col-span-2">
+                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Asset Name</Label>
+                    <Input placeholder="e.g. Caterpillar Excavator 320" className="rounded-[8px]" value={addName} onChange={e => setAddName(e.target.value)} />
                   </div>
-                  <div className="space-y-2">
-                    <Label>Asset Type</Label>
-                    <Select>
-                      <SelectTrigger className="rounded-[8px]"><SelectValue placeholder="Select" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="pump">Pump</SelectItem>
-                        <SelectItem value="crane">Crane</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Asset Type</Label>
+                    <Select value={addType} onValueChange={setAddType}>
+                      <SelectTrigger className="rounded-[8px] bg-white"><SelectValue /></SelectTrigger>
+                      <SelectContent className="bg-white">
+                        <SelectItem value="Excavator">Excavator</SelectItem>
+                        <SelectItem value="Crane">Crane</SelectItem>
+                        <SelectItem value="Mixer">Concrete Mixer</SelectItem>
+                        <SelectItem value="Generator">Generator</SelectItem>
+                        <SelectItem value="Pump">Hydraulic Pump</SelectItem>
+                        <SelectItem value="Other">Other Equipment</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Asset ID Number</Label>
-                    <Input placeholder="AST-009" className="rounded-[8px]" />
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Serial / ID Number</Label>
+                    <Input placeholder="e.g. CAT-9821-X" className="rounded-[8px]" value={addSerial} onChange={e => setAddSerial(e.target.value)} />
                   </div>
-                  <div className="space-y-2">
-                    <Label>Purchase Date</Label>
-                    <Input type="date" className="rounded-[8px]" />
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Purchase Date</Label>
+                    <Input type="date" className="rounded-[8px]" value={addDate} onChange={e => setAddDate(e.target.value)} />
                   </div>
-                  <div className="space-y-2">
-                    <Label>Purchase Cost (₹)</Label>
-                    <Input type="number" placeholder="0.00" className="rounded-[8px]" />
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Purchase Cost (₹)</Label>
+                    <Input type="number" placeholder="4500000" className="rounded-[8px] font-bold" value={addCost} onChange={e => setAddCost(e.target.value)} />
                   </div>
-                  <div className="space-y-2">
-                    <Label>Initial Location</Label>
-                    <Select>
-                      <SelectTrigger className="rounded-[8px]"><SelectValue placeholder="Select" /></SelectTrigger>
-                      <SelectContent>
-                         <SelectItem value="ta">Tower A</SelectItem>
-                         <SelectItem value="tb">Tower B</SelectItem>
-                      </SelectContent>
-                    </Select>
+                  <div className="space-y-1.5 md:col-span-2">
+                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Initial Location</Label>
+                    <Input placeholder="e.g. Tower B - Basement Zone" className="rounded-[8px]" value={addLocation} onChange={e => setAddLocation(e.target.value)} />
                   </div>
                 </div>
               </div>
-              <DialogFooter>
-                <Button variant="outline" className="rounded-[8px]">Cancel</Button>
-                <Button className="bg-[#0066FF] hover:bg-[#0052CC] text-white rounded-[8px] font-bold">Register Asset</Button>
+              <DialogFooter className="gap-2 sm:gap-0 border-t border-[#F1F5F9] pt-4">
+                <Button variant="outline" className="rounded-[10px]" onClick={() => setIsAddOpen(false)}>Cancel</Button>
+                <Button className="bg-[#0066FF] hover:bg-[#0052CC] text-white rounded-[10px] font-bold" onClick={handleAddAsset} disabled={isSubmitting}>
+                  {isSubmitting && <Loader2 className="animate-spin w-4 h-4 mr-1.5" />}
+                  Register Asset
+                </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
         </div>
       </section>
+
+      {/* ASSIGN ASSET DIALOG */}
+      <Dialog open={isAssignOpen} onOpenChange={setIsAssignOpen}>
+        <DialogContent className="sm:max-w-[450px] bg-white border border-slate-100 shadow-2xl rounded-[24px]">
+          <DialogHeader className="border-b border-[#F1F5F9] pb-4">
+            <DialogTitle className="text-lg font-bold text-[#0F172A] text-left">Assign Asset & Equipment</DialogTitle>
+            <p className="text-[11px] text-slate-500 mt-0.5 text-left font-medium">Allocate this equipment to an active site user and track its location.</p>
+          </DialogHeader>
+          <div className="grid gap-4 py-4 text-left">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Asset Selected</Label>
+              <div className="p-3 bg-slate-50 border border-[#E8ECF0] rounded-[10px] font-bold text-[#0F172A] text-[14px]">
+                {selectedAsset?.name} <span className="font-semibold text-slate-400 text-xs ml-1.5">({selectedAsset?.type})</span>
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Assign User</Label>
+              <Select value={assignUserId} onValueChange={setAssignUserId}>
+                <SelectTrigger className="rounded-[8px] bg-white"><SelectValue /></SelectTrigger>
+                <SelectContent className="bg-white">
+                  <SelectItem value="unassigned">Unassigned (Mark as Unallocated)</SelectItem>
+                  {users.map((u: any) => (
+                    <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Current Location / Project Tower</Label>
+              <Input 
+                placeholder="e.g. Tower B - Floor 14" 
+                className="rounded-[8px] bg-white font-semibold text-[13px]" 
+                value={assignLocation}
+                onChange={e => setAssignLocation(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0 border-t border-[#F1F5F9] pt-4">
+            <Button variant="outline" className="rounded-[10px]" onClick={() => setIsAssignOpen(false)}>Cancel</Button>
+            <Button className="bg-[#0066FF] hover:bg-[#0052CC] text-white rounded-[10px] font-bold" onClick={handleAssignAssetSubmit} disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="animate-spin w-4 h-4 mr-1.5" />}
+              Assign Asset
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* ASSETS DISPLAY */}
       {viewMode === 'grid' ? (
@@ -227,28 +396,28 @@ export default function AssetsClient({ initialAssets }: { initialAssets: any[] }
               <div className={`h-1 w-full ${statColor} absolute top-0 left-0 right-0`} />
               <CardContent className="p-6 pt-6 flex-1 flex flex-col">
                  <div className="flex justify-between items-start mb-4">
-                   <div className={`h-12 w-12 rounded-[12px] flex items-center justify-center ${ast.status === 'Active' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : ast.status === 'Maintenance' ? 'bg-amber-50 text-amber-600 border border-amber-100' : 'bg-slate-100 text-slate-500 border border-slate-200'}`}>
+                    <div className={`h-12 w-12 rounded-[12px] flex items-center justify-center ${ast.status === 'Active' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : ast.status === 'Maintenance' ? 'bg-amber-50 text-amber-600 border border-amber-100' : 'bg-slate-100 text-slate-500 border border-slate-200'}`}>
                       <Truck className="h-6 w-6" />
-                   </div>
-                   <div className="flex flex-col items-end gap-1.5">
-                      <StatusBadge s={ast.status} />
-                      <span className="text-[11px] font-mono text-slate-400 bg-slate-50 px-2 py-0.5 rounded-[4px]">{ast.id}</span>
-                   </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-1.5">
+                       <StatusBadge s={ast.status} />
+                       <span className="text-[11px] font-mono text-slate-400 bg-slate-50 px-2 py-0.5 rounded-[4px]">{ast.displayId}</span>
+                    </div>
                  </div>
                  
                  <h3 className="text-[17px] font-bold text-[#0F172A] leading-tight mb-4">{ast.name}</h3>
                  
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-y-3 gap-x-2 mt-auto text-[13px]">
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-y-3 gap-x-2 mt-auto text-[13px] text-left">
                     <div>
                       <span className="flex items-center gap-1.5 text-slate-500 text-[11px] uppercase font-bold tracking-wider mb-1"><MapPin className="w-3 h-3 text-slate-400"/> Location</span>
-                      <span className="font-semibold text-[#0F172A]">{ast.location}</span>
+                      <span className="font-semibold text-[#0F172A] truncate block" title={ast.location}>{ast.location}</span>
                     </div>
                     <div>
                       <span className="flex items-center gap-1.5 text-slate-500 text-[11px] uppercase font-bold tracking-wider mb-1"><User className="w-3 h-3 text-slate-400"/> Assigned To</span>
-                      <span className="font-semibold text-[#0F172A]">{ast.assigned}</span>
+                      <span className="font-semibold text-[#0F172A] truncate block" title={ast.assigned}>{ast.assigned}</span>
                     </div>
                     <div>
-                      <span className="flex items-center gap-1.5 text-slate-500 text-[11px] uppercase font-bold tracking-wider mb-1"><Clock className="w-3 h-3 text-slate-400"/> Hrs / Month</span>
+                      <span className="flex items-center gap-1.5 text-slate-500 text-[11px] uppercase font-bold tracking-wider mb-1"><Clock className="w-3 h-3 text-slate-400"/> Hrs Used</span>
                       <span className="font-semibold text-[#0F172A]">{ast.hours} <span className="text-slate-400 font-normal ml-0.5">hrs</span></span>
                     </div>
                     <div>
@@ -262,16 +431,16 @@ export default function AssetsClient({ initialAssets }: { initialAssets: any[] }
                       <SheetTrigger asChild>
                         <Button className="flex-1 bg-white border border-[#E8ECF0] text-[#0F172A] hover:bg-slate-50 text-[13px] h-9 rounded-[8px] shadow-sm font-semibold">Details</Button>
                       </SheetTrigger>
-                      <SheetContent className="sm:max-w-[500px]">
-                        <SheetHeader className="mb-6">
-                          <SheetTitle className="text-xl font-bold">{ast.name}</SheetTitle>
+                      <SheetContent className="sm:max-w-[500px] overflow-y-auto bg-white border-l border-[#E8ECF0] shadow-2xl">
+                        <SheetHeader className="mb-6 border-b border-[#E8ECF0] pb-4">
+                          <SheetTitle className="text-xl font-bold text-left">{ast.name}</SheetTitle>
                           <div className="flex items-center gap-3 mt-2">
                              <StatusBadge s={ast.status} />
                              <span className="text-[13px] font-medium text-slate-500">ID: <span className="font-mono">{ast.id}</span></span>
                           </div>
                         </SheetHeader>
                         
-                        <div className="space-y-6">
+                        <div className="space-y-6 text-left">
                            <div className="grid grid-cols-3 gap-3">
                               <div className="bg-slate-50 p-3 rounded-[10px] border border-[#E8ECF0]">
                                  <p className="text-[10px] uppercase font-bold text-slate-400">Purchased</p>
@@ -283,7 +452,7 @@ export default function AssetsClient({ initialAssets }: { initialAssets: any[] }
                               </div>
                               <div className="bg-slate-50 p-3 rounded-[10px] border border-[#E8ECF0]">
                                  <p className="text-[10px] uppercase font-bold text-slate-400">Total Hrs</p>
-                                 <p className="font-semibold text-[13px] text-[#0F172A] mt-1">2,450</p>
+                                 <p className="font-semibold text-[13px] text-[#0F172A] mt-1">{ast.hours}</p>
                               </div>
                            </div>
 
@@ -298,7 +467,7 @@ export default function AssetsClient({ initialAssets }: { initialAssets: any[] }
                                     <Tooltip cursor={{fill: '#F8FAFC'}} contentStyle={{borderRadius: '8px', border: '1px solid #E8ECF0', boxShadow: '0 4px 12px rgba(0,0,0,0.1)'}}/>
                                     <Bar dataKey="hours" name="Hours" fill="#0066FF" radius={[4, 4, 0, 0]} barSize={24} />
                                   </BarChart>
-                               </ResponsiveContainer>
+                                </ResponsiveContainer>
                              </div>
                            </div>
 
@@ -323,16 +492,21 @@ export default function AssetsClient({ initialAssets }: { initialAssets: any[] }
                            
                            <div className="pt-4 border-t border-[#E8ECF0] flex gap-3">
                               {ast.status === 'Active' ? (
-                                <Button className="flex-1 bg-amber-500 hover:bg-amber-600 text-white rounded-[8px] font-bold">Send to Maintenance</Button>
+                                <Button className="flex-1 bg-amber-500 hover:bg-amber-600 text-white rounded-[8px] font-bold" onClick={() => handleStatusChange(ast.id, 'Maintenance')}>Send to Maintenance</Button>
                               ) : (
-                                <Button className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white rounded-[8px] font-bold">Mark as Active</Button>
+                                <Button className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white rounded-[8px] font-bold" onClick={() => handleStatusChange(ast.id, 'Active')}>Mark as Active</Button>
                               )}
                            </div>
                         </div>
                       </SheetContent>
                     </Sheet>
 
-                    <Button className="flex-1 bg-[#0066FF] hover:bg-[#0052CC] text-white text-[13px] h-9 rounded-[8px] shadow-sm font-semibold">Assign</Button>
+                    <Button 
+                      className="flex-1 bg-[#0066FF] hover:bg-[#0052CC] text-white text-[13px] h-9 rounded-[8px] shadow-sm font-semibold"
+                      onClick={() => triggerAssignModal(ast)}
+                    >
+                      Assign
+                    </Button>
                  </div>
               </CardContent>
             </InteractivePearlCard>
@@ -341,51 +515,66 @@ export default function AssetsClient({ initialAssets }: { initialAssets: any[] }
       ) : (
         <PearlCard>
           <ResponsiveTable>
-<Table>
-            <TableHeader className="bg-[#FAFBFC] border-b border-[#E8ECF0]">
-              <TableRow className="hover:bg-transparent border-none">
-                <TableHead className="font-semibold text-xs text-[#64748B] uppercase py-4">Asset Details</TableHead>
-                <TableHead className="font-semibold text-xs text-[#64748B] uppercase">Type</TableHead>
-                <TableHead className="font-semibold text-xs text-[#64748B] uppercase">Current Assignment</TableHead>
-                <TableHead className="font-semibold text-xs text-[#64748B] uppercase">Location</TableHead>
-                <TableHead className="font-semibold text-xs text-[#64748B] uppercase">Maintenance</TableHead>
-                <TableHead className="font-semibold text-xs text-[#64748B] uppercase">Status</TableHead>
-                <TableHead className="font-semibold text-xs text-[#64748B] uppercase text-right w-[140px]">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredAssets.map((ast) => (
-                <TableRow key={ast.id} className="hover:bg-blue-50/40 border-b border-[#E8ECF0]/60 transition-colors">
-                  <TableCell>
-                    <div className="font-bold text-[14px] text-[#0F172A]">{ast.name}</div>
-                    <div className="text-[11px] font-mono text-slate-500 mt-1">{ast.id}</div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className="bg-slate-50 text-slate-600 rounded-[4px] text-[10px] font-bold tracking-wide uppercase border-slate-200">{ast.type}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="font-medium text-[13px] text-[#0F172A] flex items-center gap-1.5"><User className="w-3.5 h-3.5 text-slate-400"/> {ast.assigned}</div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="font-medium text-[13px] text-[#0F172A] flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5 text-slate-400"/> {ast.location}</div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="font-bold text-[13px] text-amber-700 flex items-center gap-1.5"><Wrench className="w-3.5 h-3.5 text-amber-500"/> {ast.nextService}</div>
-                  </TableCell>
-                  <TableCell>
-                    <StatusBadge s={ast.status} />
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="outline" size="sm" className="h-8 text-[11px] rounded-[6px] font-semibold text-[#0F172A]">View Details</Button>
-                  </TableCell>
+            <Table>
+              <TableHeader className="bg-[#FAFBFC] border-b border-[#E8ECF0]">
+                <TableRow className="hover:bg-transparent border-none">
+                  <TableHead className="font-semibold text-xs text-[#64748B] uppercase py-4">Asset Details</TableHead>
+                  <TableHead className="font-semibold text-xs text-[#64748B] uppercase">Type</TableHead>
+                  <TableHead className="font-semibold text-xs text-[#64748B] uppercase">Current Assignment</TableHead>
+                  <TableHead className="font-semibold text-xs text-[#64748B] uppercase">Location</TableHead>
+                  <TableHead className="font-semibold text-xs text-[#64748B] uppercase">Maintenance</TableHead>
+                  <TableHead className="font-semibold text-xs text-[#64748B] uppercase">Status</TableHead>
+                  <TableHead className="font-semibold text-xs text-[#64748B] uppercase text-right w-[200px]">Actions</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-</ResponsiveTable>
+              </TableHeader>
+              <TableBody className="text-left">
+                {filteredAssets.map((ast) => (
+                  <TableRow key={ast.id} className="hover:bg-blue-50/40 border-b border-[#E8ECF0]/60 transition-colors">
+                    <TableCell>
+                      <div className="font-bold text-[14px] text-[#0F172A]">{ast.name}</div>
+                      <div className="text-[11px] font-mono text-slate-500 mt-1">{ast.displayId}</div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="bg-slate-50 text-slate-600 rounded-[4px] text-[10px] font-bold tracking-wide uppercase border-slate-200">{ast.type}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="font-medium text-[13px] text-[#0F172A] flex items-center gap-1.5"><User className="w-3.5 h-3.5 text-slate-400"/> {ast.assigned}</div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="font-medium text-[13px] text-[#0F172A] flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5 text-slate-400"/> {ast.location}</div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="font-bold text-[13px] text-amber-700 flex items-center gap-1.5"><Wrench className="w-3.5 h-3.5 text-amber-500"/> {ast.nextService}</div>
+                    </TableCell>
+                    <TableCell>
+                      <Select defaultValue={ast.status} onValueChange={(val) => handleStatusChange(ast.id, val)}>
+                        <SelectTrigger className="h-8 w-32 border text-xs font-semibold rounded-[6px] bg-white">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white">
+                          <SelectItem value="Active">Active</SelectItem>
+                          <SelectItem value="Maintenance">Maintenance</SelectItem>
+                          <SelectItem value="Decommissioned">Decommissioned</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+                    <TableCell className="text-right space-x-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="h-8 text-[11px] rounded-[6px] font-semibold text-[#0F172A]"
+                        onClick={() => triggerAssignModal(ast)}
+                      >
+                        Assign
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </ResponsiveTable>
         </PearlCard>
       )}
-
     </div>
-  )
+  );
 }

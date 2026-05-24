@@ -23,7 +23,7 @@ export function ProjectSwitcher() {
           }
         }}
       >
-        <SelectTrigger className="w-full bg-slate-800/50 border-slate-700 text-white">
+        <SelectTrigger className="w-full bg-slate-800/50 border-slate-700 text-white" suppressHydrationWarning>
           <SelectValue placeholder="All Projects" />
         </SelectTrigger>
         <SelectContent>

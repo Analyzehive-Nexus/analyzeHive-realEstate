@@ -1,27 +1,26 @@
 "use client";
 import { ResponsiveTable } from "@/components/ui/responsive-table";
 
-
-import { useState } from "react"
+import { useState } from "react";
 import { 
   Package, Search, Filter, Plus, FileDown,
-  Edit, Trash2, History, AlertTriangle, CheckCircle, Clock 
-} from "lucide-react"
+  Edit, Trash2, History, AlertTriangle, CheckCircle, Clock, Loader2 
+} from "lucide-react";
 
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog"
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/components/ui/toast";
+import { createDemandRequest } from "@/app/construction/actions";
 
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
-
-// Mock array replaced by props
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 const stockHistoryData = [
   { day: "1", qty: 150 }, { day: "5", qty: 140 }, { day: "10", qty: 140 },
@@ -34,13 +33,6 @@ const txHistory = [
   { date: "Mar 10, 2026", type: "Used", qty: "-35", ref: "Tower B, Fl 8", by: "Sunil Sharma" },
   { date: "Mar 05, 2026", type: "Adjusted", qty: "-5", ref: "Damage written off", by: "Amit M" },
 ];
-
-// HELPER COMPONENTS
-const SectionHeading = ({ title }: { title: string }) => (
-  <div className="flex items-center justify-between mb-4">
-    <h2 className="text-lg font-semibold text-[#0F172A] tracking-tight">{title}</h2>
-  </div>
-);
 
 const PearlCard = ({ children, className = "" }: { children: React.ReactNode, className?: string }) => (
   <Card className={`overflow-hidden ${className}`} style={{ background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E8ECF0' }}>
@@ -55,8 +47,18 @@ const InteractivePearlCard = ({ children, className = "" }: { children: React.Re
 );
 
 export default function StockClient({ items, stats }: { items: any[], stats: any }) {
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRestock, setSelectedRestock] = useState<any>(null);
+
+  const [isRequestOpen, setIsRequestOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [qtyInput, setQtyInput] = useState("");
+  const [justificationInput, setJustificationInput] = useState("");
+  const [requiredByInput, setRequiredByInput] = useState("");
+  const [towerInput, setTowerInput] = useState("Tower A");
+
+  const totalValue = (items || []).reduce((sum, item) => sum + (Number(item.current_stock_level || 0) * Number(item.unit_cost || 0)), 0);
 
   const formatCur = (val: number) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(val);
 
@@ -73,31 +75,31 @@ export default function StockClient({ items, stats }: { items: any[], stats: any
         <InteractivePearlCard className="p-5">
           <CardContent className="p-0 flex flex-col justify-center">
             <p className="text-[12px] font-semibold text-[#64748B] uppercase tracking-[0.05em] mb-1">Total Items</p>
-            <h3 className="text-[28px] font-bold text-[#0F172A] leading-tight">{stats?.totalItems || 0}</h3>
+            <h3 className="text-[28px] font-bold text-[#0F172A] leading-tight">{stats?.total || items.length}</h3>
           </CardContent>
         </InteractivePearlCard>
         <InteractivePearlCard className="p-5 border-l-4 border-l-[#10B981]">
           <CardContent className="p-0 flex flex-col justify-center">
             <p className="text-[12px] font-semibold text-[#64748B] uppercase tracking-[0.05em] mb-1">Good Stock</p>
-            <h3 className="text-[28px] font-bold text-[#10B981] leading-tight">{items.filter(i => i.status === 'Good').length}</h3>
+            <h3 className="text-[28px] font-bold text-[#10B981] leading-tight">{stats?.good || items.filter(item => (item.current_stock_level || 0) > (item.min_threshold || 0) * 2).length}</h3>
           </CardContent>
         </InteractivePearlCard>
         <InteractivePearlCard className="p-5 border-l-4 border-l-[#F59E0B]">
           <CardContent className="p-0 flex flex-col justify-center">
             <p className="text-[12px] font-semibold text-[#64748B] uppercase tracking-[0.05em] mb-1">Low Stock</p>
-            <h3 className="text-[28px] font-bold text-[#F59E0B] leading-tight">{items.filter(i => i.status === 'Low').length}</h3>
+            <h3 className="text-[28px] font-bold text-[#F59E0B] leading-tight">{stats?.low || items.filter(item => (item.current_stock_level || 0) > (item.min_threshold || 0) && (item.current_stock_level || 0) <= (item.min_threshold || 0) * 2).length}</h3>
           </CardContent>
         </InteractivePearlCard>
         <InteractivePearlCard className="p-5 border-l-4 border-l-[#EF4444]">
           <CardContent className="p-0 flex flex-col justify-center">
             <p className="text-[12px] font-semibold text-[#64748B] uppercase tracking-[0.05em] mb-1">Critical</p>
-            <h3 className="text-[28px] font-bold text-[#EF4444] leading-tight">{items.filter(i => i.status === 'Critical').length}</h3>
+            <h3 className="text-[28px] font-bold text-[#EF4444] leading-tight">{stats?.critical || items.filter(item => (item.current_stock_level || 0) <= (item.min_threshold || 0)).length}</h3>
           </CardContent>
         </InteractivePearlCard>
         <InteractivePearlCard className="p-5">
           <CardContent className="p-0 flex flex-col justify-center">
              <p className="text-[12px] font-semibold text-[#64748B] uppercase tracking-[0.05em] mb-1">Total Value</p>
-             <h3 className="text-[28px] font-bold text-[#0F172A] leading-tight">₹{(stats?.totalValue / 100000).toFixed(1)}L</h3>
+             <h3 className="text-[28px] font-bold text-[#0F172A] leading-tight">₹{(totalValue / 100000).toFixed(1)}L</h3>
           </CardContent>
         </InteractivePearlCard>
       </section>
@@ -118,86 +120,15 @@ export default function StockClient({ items, stats }: { items: any[], stats: any
             <SelectTrigger className="w-[160px] h-10 bg-slate-50 border-slate-200 rounded-[10px]">
               <SelectValue placeholder="Category" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-white">
               <SelectItem value="all">All Categories</SelectItem>
-              <SelectItem value="cement">Cement</SelectItem>
-              <SelectItem value="steel">Steel</SelectItem>
-              <SelectItem value="finishing">Finishing</SelectItem>
+              <SelectItem value="Cement">Cement</SelectItem>
+              <SelectItem value="Steel">Steel</SelectItem>
+              <SelectItem value="Bricks">Bricks</SelectItem>
+              <SelectItem value="Sand">Sand</SelectItem>
+              <SelectItem value="Other">Other</SelectItem>
             </SelectContent>
           </Select>
-          <Select defaultValue="all">
-            <SelectTrigger className="w-[140px] h-10 bg-slate-50 border-slate-200 rounded-[10px]">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="good">Good</SelectItem>
-              <SelectItem value="low">Low</SelectItem>
-              <SelectItem value="critical">Critical</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex gap-3">
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button className="h-10 bg-[#0066FF] hover:bg-[#0052CC] text-white rounded-[10px] shadow-sm flex gap-2">
-                <Plus className="w-4 h-4" /> Add Material
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px]">
-              <DialogHeader>
-                <DialogTitle>Add New Material</DialogTitle>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Material Name</Label>
-                    <Input placeholder="e.g. Gypsum Board" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Category</Label>
-                    <Select>
-                      <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="finishing">Finishing</SelectItem>
-                        <SelectItem value="electrical">Electrical</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Unit of Measurement</Label>
-                    <Input placeholder="e.g. sqft, pcs, bags" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Minimum Threshold</Label>
-                    <Input type="number" placeholder="0" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Unit Cost (₹)</Label>
-                    <Input type="number" placeholder="0.00" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Initial Quantity</Label>
-                    <Input type="number" placeholder="0" />
-                  </div>
-                  <div className="col-span-2 space-y-2">
-                    <Label>Preferred Supplier</Label>
-                    <Select>
-                      <SelectTrigger><SelectValue placeholder="Select Supplier" /></SelectTrigger>
-                      <SelectContent>
-                         <SelectItem value="s1">Rajhans Cement Co.</SelectItem>
-                         <SelectItem value="s2">Steel Plus Pvt Ltd</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" className="rounded-[8px]">Cancel</Button>
-                <Button className="bg-[#0066FF] hover:bg-[#0052CC] text-white rounded-[8px]">Add Material</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
         </div>
       </section>
 
@@ -218,13 +149,14 @@ export default function StockClient({ items, stats }: { items: any[], stats: any
               </TableRow>
             </TableHeader>
             <TableBody>
-              {items.filter(m => (m.item_name || '').toLowerCase().includes(searchTerm.toLowerCase())).map((item) => {
-                const itemValue = (item.quantity || 0) * (item.unit_cost || 0);
+              {items.filter(m => (m.name || '').toLowerCase().includes(searchTerm.toLowerCase())).map((item) => {
+                const itemValue = (item.current_stock_level || 0) * (item.unit_cost || 0);
+                const status = item.current_stock_level > item.min_threshold * 2 ? 'Good' : item.current_stock_level > item.min_threshold ? 'Low' : 'Critical';
                 return (
                 <TableRow key={item.id} className="hover:bg-blue-50/40 border-b border-[#E8ECF0]/60 transition-colors">
                   <TableCell>
                     <div className="flex flex-col">
-                       <span className="font-bold text-[14px] text-[#0F172A]">{item.item_name}</span>
+                       <span className="font-bold text-[14px] text-[#0F172A]">{item.name}</span>
                        <div className="flex items-center gap-2 mt-1">
                           <span className="text-[10px] text-slate-400 font-mono">{item.id?.substring(0,8)}</span>
                           <Badge variant="outline" className="bg-slate-50 text-slate-600 rounded-[4px] text-[9px] font-semibold uppercase border-slate-200 tracking-wider">
@@ -234,18 +166,18 @@ export default function StockClient({ items, stats }: { items: any[], stats: any
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div className="font-bold text-[14px] text-[#0F172A]">{item.quantity} <span className="text-[12px] font-medium text-slate-500">{item.unit}</span></div>
+                    <div className="font-bold text-[14px] text-[#0F172A]">{item.current_stock_level} <span className="text-[12px] font-medium text-slate-500">{item.unit_of_measurement}</span></div>
                     <div className="text-[10px] text-slate-400 mt-0.5">Updated: {new Date(item.updated_at).toLocaleDateString()}</div>
                   </TableCell>
                   <TableCell className="text-slate-500 font-medium text-sm">{item.min_threshold}</TableCell>
                   <TableCell>
                     <Badge className={`rounded-full shadow-none text-[10px] font-bold uppercase tracking-wider ${
-                      item.status === 'Good' ? 'bg-[#10B981]/15 text-[#10B981] hover:bg-[#10B981]/20' :
-                      item.status === 'Low' ? 'bg-[#F59E0B]/15 text-[#D97706] hover:bg-[#F59E0B]/20' :
+                      status === 'Good' ? 'bg-[#10B981]/15 text-[#10B981] hover:bg-[#10B981]/20' :
+                      status === 'Low' ? 'bg-[#F59E0B]/15 text-[#D97706] hover:bg-[#F59E0B]/20' :
                       'bg-[#EF4444]/15 text-[#EF4444] hover:bg-[#EF4444]/20'
                     }`}>
-                      {item.status === 'Critical' && <AlertTriangle className="w-3 h-3 mr-1" />}
-                      {item.status}
+                      {status === 'Critical' && <AlertTriangle className="w-3 h-3 mr-1" />}
+                      {status}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right font-medium text-[13px]">{formatCur(item.unit_cost || 0)}</TableCell>
@@ -261,10 +193,10 @@ export default function StockClient({ items, stats }: { items: any[], stats: any
                          </SheetTrigger>
                          <SheetContent className="sm:max-w-[450px]">
                            <SheetHeader className="mb-6">
-                             <SheetTitle className="text-xl font-bold">{item.item_name}</SheetTitle>
+                             <SheetTitle className="text-xl font-bold">{item.name}</SheetTitle>
                              <div className="flex items-center gap-2 mt-2">
                                <Badge variant="outline" className="bg-slate-50">{item.category}</Badge>
-                               <Badge variant="secondary" className="bg-blue-50 text-blue-700">Stock: {item.quantity} {item.unit}</Badge>
+                               <Badge variant="secondary" className="bg-blue-50 text-blue-700">Stock: {item.current_stock_level} {item.unit_of_measurement}</Badge>
                              </div>
                            </SheetHeader>
                            
@@ -304,65 +236,134 @@ export default function StockClient({ items, stats }: { items: any[], stats: any
                          </SheetContent>
                        </Sheet>
 
-                       {/* RESTOCK DIALOG */}
-                       <Dialog>
+                       {/* DEMAND REQUISITION DIALOG */}
+                       <Dialog open={isRequestOpen && selectedRestock?.id === item.id} onOpenChange={(open) => {
+                         if (!open) {
+                           setIsRequestOpen(false);
+                         } else {
+                           setSelectedRestock(item);
+                           setIsRequestOpen(true);
+                           setQtyInput("");
+                           setJustificationInput("");
+                           setRequiredByInput("");
+                           setTowerInput("Tower A");
+                         }
+                       }}>
                          <DialogTrigger asChild>
-                           <Button variant="outline" size="sm" className="h-8 border-orange-200 text-orange-600 hover:bg-orange-50 hover:text-orange-700 rounded-[8px] bg-orange-50/50 font-semibold" onClick={() => setSelectedRestock(item)}>
-                              Request
+                           <Button 
+                             variant="outline" 
+                             size="sm" 
+                             className="h-8 border-orange-200 text-orange-600 hover:bg-orange-50 hover:text-orange-700 rounded-[8px] bg-orange-50/50 font-semibold"
+                             onClick={() => {
+                               setSelectedRestock(item);
+                               setIsRequestOpen(true);
+                               setQtyInput("");
+                               setJustificationInput("");
+                               setRequiredByInput("");
+                               setTowerInput("Tower A");
+                             }}
+                           >
+                               Request
                            </Button>
                          </DialogTrigger>
-                         <DialogContent className="sm:max-w-[450px]">
+                         <DialogContent className="sm:max-w-[450px] bg-white rounded-[16px] border border-slate-100 shadow-xl">
                            <DialogHeader>
-                             <DialogTitle>Demand Request</DialogTitle>
+                             <DialogTitle className="text-xl font-bold text-slate-900">Demand Requisition</DialogTitle>
                            </DialogHeader>
                            {selectedRestock && (
-                             <div className="grid gap-4 py-4">
+                             <form onSubmit={async (e) => {
+                               e.preventDefault();
+                               setIsSubmitting(true);
+                               const res = await createDemandRequest(
+                                 selectedRestock.id,
+                                 parseFloat(qtyInput) || 0,
+                                 "00000000-0000-0000-0000-000000000001", // अर्जुन मेहता (Stable User ID)
+                                 towerInput,
+                                 justificationInput,
+                                 requiredByInput
+                               );
+                               setIsSubmitting(false);
+                               if (res.error) {
+                                 toast({ title: "Failed to Submit", description: res.error, variant: "destructive" });
+                               } else {
+                                 toast({ title: "Requisition Sent", description: "Your material demand requisition has been submitted." });
+                                 setIsRequestOpen(false);
+                               }
+                             }} className="space-y-4 pt-4">
                                <div className="p-3 bg-slate-50 rounded-[10px] border border-[#E8ECF0] flex justify-between items-center shadow-sm">
                                   <div>
-                                    <div className="font-bold text-[14px] text-[#0F172A]">{selectedRestock.item_name}</div>
-                                    <div className="text-[12px] text-slate-500 font-medium">Current Stock: {selectedRestock.quantity} {selectedRestock.unit}</div>
+                                    <div className="font-bold text-[14px] text-[#0F172A]">{selectedRestock.name}</div>
+                                    <div className="text-[12px] text-slate-500 font-medium">Current Stock: {selectedRestock.current_stock_level} {selectedRestock.unit_of_measurement}</div>
                                   </div>
-                                  {selectedRestock.status === 'Critical' && <Badge variant="destructive" className="h-5 text-[10px] rounded-full px-2 uppercase shadow-none tracking-wider bg-red-100 text-red-700 hover:bg-red-100 border-none">Critical</Badge>}
+                                  {status === 'Critical' && <Badge variant="destructive" className="h-5 text-[10px] rounded-full px-2 uppercase shadow-none tracking-wider bg-red-100 text-red-700 hover:bg-red-100 border-none">Critical</Badge>}
                                </div>
                                <div className="space-y-2">
-                                 <Label className="text-slate-600 font-semibold">Quantity Required ({selectedRestock.unit})</Label>
-                                 <Input type="number" placeholder="Enter quantity" className="h-10 rounded-[8px]" />
+                                 <Label className="text-slate-600 font-semibold">Quantity Required ({selectedRestock.unit_of_measurement})</Label>
+                                 <Input 
+                                   type="number" 
+                                   placeholder="Enter quantity" 
+                                   value={qtyInput}
+                                   onChange={(e) => setQtyInput(e.target.value)}
+                                   required 
+                                   min="0.01" 
+                                   className="h-10 rounded-[8px]" 
+                                 />
                                </div>
                                <div className="space-y-2">
-                                 <Label className="text-slate-600 font-semibold">Preferred Supplier</Label>
-                                 <Select defaultValue="s1">
-                                   <SelectTrigger className="h-10 rounded-[8px]"><SelectValue /></SelectTrigger>
-                                   <SelectContent>
-                                     <SelectItem value="s1">Supplier {selectedRestock.supplier_id || 'Unknown'}</SelectItem>
-                                     <SelectItem value="s2">Other Supplier...</SelectItem>
+                                 <Label className="text-slate-600 font-semibold">Target Tower</Label>
+                                 <Select value={towerInput} onValueChange={setTowerInput}>
+                                   <SelectTrigger className="h-10 rounded-[8px] bg-white"><SelectValue /></SelectTrigger>
+                                   <SelectContent className="bg-white">
+                                     <SelectItem value="Tower A">Tower A</SelectItem>
+                                     <SelectItem value="Tower B">Tower B</SelectItem>
+                                     <SelectItem value="Tower C">Tower C</SelectItem>
+                                     <SelectItem value="Tower D">Tower D</SelectItem>
                                    </SelectContent>
                                  </Select>
                                </div>
                                <div className="space-y-2">
                                  <Label className="text-slate-600 font-semibold">Required By Date</Label>
-                                 <Input type="date" className="h-10 rounded-[8px]" />
+                                 <Input 
+                                   type="date" 
+                                   value={requiredByInput}
+                                   onChange={(e) => setRequiredByInput(e.target.value)}
+                                   required 
+                                   className="h-10 rounded-[8px]" 
+                                 />
                                </div>
                                <div className="space-y-2">
                                  <Label className="text-slate-600 font-semibold">Notes / Justification</Label>
-                                 <Textarea placeholder="Specific requirements or reason..." rows={3} className="rounded-[8px]" />
+                                 <Textarea 
+                                   placeholder="Specific requirements or reason..." 
+                                   rows={3} 
+                                   value={justificationInput}
+                                   onChange={(e) => setJustificationInput(e.target.value)}
+                                   className="rounded-[8px]" 
+                                 />
                                </div>
-                             </div>
+                               <DialogFooter className="gap-2 sm:gap-0 pt-4">
+                                 <Button type="button" variant="outline" className="rounded-[8px] h-10" onClick={() => setIsRequestOpen(false)}>Cancel</Button>
+                                 <Button type="submit" disabled={isSubmitting} className="bg-orange-500 hover:bg-orange-600 text-white rounded-[8px] h-10 font-bold shadow-sm flex items-center justify-center gap-2">
+                                   {isSubmitting && <Loader2 className="animate-spin w-4 h-4" />}
+                                   Submit Request
+                                 </Button>
+                               </DialogFooter>
+                             </form>
                            )}
-                           <DialogFooter className="gap-2 sm:gap-0">
-                             <Button variant="outline" className="rounded-[8px] h-10">Cancel</Button>
-                             <Button className="bg-orange-500 hover:bg-orange-600 text-white rounded-[8px] h-10 font-bold shadow-sm">Submit Request</Button>
-                           </DialogFooter>
                          </DialogContent>
                        </Dialog>
                     </div>
                   </TableCell>
                 </TableRow>
               );})}
+              {(items.length === 0) && (
+                <TableRow><TableCell colSpan={7} className="text-center py-6 text-gray-500">No materials found</TableCell></TableRow>
+              )}
             </TableBody>
           </Table>
 </ResponsiveTable>
         </PearlCard>
       </section>
     </div>
-  )
+  );
 }
