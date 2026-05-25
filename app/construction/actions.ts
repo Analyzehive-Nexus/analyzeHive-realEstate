@@ -730,7 +730,6 @@ export async function createFinancialTransaction(
         transaction_date: transactionDate,
         status: "Approved",
         logged_by_user_id: "workos-site-001",
-        created_at: new Date().toISOString(),
       })
       .select()
       .single();
@@ -1012,7 +1011,6 @@ export async function recordVendorPayment(
         transaction_date: new Date().toISOString().split("T")[0],
         status: "Approved",
         logged_by_user_id: "workos-site-001",
-        created_at: new Date().toISOString(),
       });
 
     if (ledgerErr) {
