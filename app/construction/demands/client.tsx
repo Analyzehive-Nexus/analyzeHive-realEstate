@@ -1,11 +1,9 @@
 "use client";
 import { ResponsiveTable } from "@/components/ui/responsive-table";
-
-
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { 
   ClipboardList, Search, Filter, Plus, FileDown,
-  CheckCircle, XCircle, AlertCircle, Clock, Info, Package
+  CheckCircle, XCircle, AlertCircle, Clock, Info, Package, Loader2
 } from "lucide-react"
 
 import { Card, CardContent } from "@/components/ui/card"
@@ -18,6 +16,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { useToast } from "@/components/ui/toast"
+import { createDemandRequest } from "@/app/construction/actions";
+import { approveDemand, rejectDemand } from "@/app/dashboard/construction/actions";
 
 // Mock array replaced by props
 const PriorityBadge = ({ p }: { p: string }) => {
@@ -28,8 +29,8 @@ const PriorityBadge = ({ p }: { p: string }) => {
 
 const StatusBadge = ({ s, r }: { s: string, r: string | null }) => {
   if (s === 'Pending') return <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-[10px] uppercase font-bold shadow-none"><Clock className="w-3 h-3 mr-1"/> Pending</Badge>;
-  if (s === 'Approved') return <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px] uppercase font-bold shadow-none"><CheckCircle className="w-3 h-3 mr-1"/> Apprv: {r}</Badge>;
-  return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 text-[10px] uppercase font-bold shadow-none"><XCircle className="w-3 h-3 mr-1"/> Rej: {r}</Badge>;
+  if (s === 'Approved') return <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px] uppercase font-bold shadow-none"><CheckCircle className="w-3 h-3 mr-1"/> Approved</Badge>;
+  return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 text-[10px] uppercase font-bold shadow-none"><XCircle className="w-3 h-3 mr-1"/> Rejected</Badge>;
 };
 
 // HELPER COMPONENTS
@@ -51,26 +52,141 @@ const InteractivePearlCard = ({ children, className = "" }: { children: React.Re
   </Card>
 );
 
-export default function DemandsClient({ initialDemands }: { initialDemands: any[] }) {
+export default function DemandsClient({ 
+  initialDemands, 
+  inventoryItems,
+  sessionUser,
+  dbUsers
+}: { 
+  initialDemands: any[]; 
+  inventoryItems: any[];
+  sessionUser?: any;
+  dbUsers?: any[];
+}) {
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("all");
   const [isRaiseFormOpen, setIsRaiseFormOpen] = useState(false);
   const [selectedReq, setSelectedReq] = useState<any>(null);
+  const [isActionLoading, setIsActionLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const demandRequests = initialDemands.map(r => ({
-    id: r.id?.substring(0,8) || 'Unknown',
-    by: r.requested_by_user?.name || 'Unknown User',
-    role: r.requested_by_user?.role || 'Staff',
-    material: r.material?.item_name || 'Material',
-    qty: `${r.quantity} ${r.material?.unit || ''}`,
-    site: r.project?.name || 'Site',
-    priority: r.priority || 'Normal',
-    date: new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-    requiredBy: r.required_date ? new Date(r.required_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A',
-    status: r.status || 'Pending',
-    reviewer: r.approved_by_user?.name || null,
-    stock: r.material?.quantity || 0,
-    unit: r.material?.unit || ''
-  }));
+  const [localDemands, setLocalDemands] = useState<any[]>(initialDemands);
+  const [localInventory, setLocalInventory] = useState<any[]>(inventoryItems || []);
+
+  // Form states
+  const [selectedItemId, setSelectedItemId] = useState("");
+  const [qtyInput, setQtyInput] = useState("");
+  const [towerInput, setTowerInput] = useState("Tower A");
+  const [priorityInput, setPriorityInput] = useState("Normal");
+  const [requiredDateInput, setRequiredDateInput] = useState("");
+  const [notesInput, setNotesInput] = useState("");
+
+  useEffect(() => {
+    setLocalDemands(initialDemands);
+  }, [initialDemands]);
+
+  useEffect(() => {
+    setLocalInventory(inventoryItems);
+  }, [inventoryItems]);
+
+  const handleApprove = async (id: string) => {
+    setIsActionLoading(true);
+    const res = await approveDemand(id);
+    setIsActionLoading(false);
+    if (res?.error) {
+      toast({ title: "Error", description: res.error, variant: "destructive" });
+    } else {
+      toast({ title: "Demand Approved", description: "Material stock has been allocated successfully." });
+      setLocalDemands(prev => prev.map(d => d.id === id ? { ...d, status: 'Approved' } : d));
+      setSelectedReq(null);
+    }
+  };
+
+  const handleReject = async (id: string) => {
+    setIsActionLoading(true);
+    const res = await rejectDemand(id);
+    setIsActionLoading(false);
+    if (res?.error) {
+      toast({ title: "Error", description: res.error, variant: "destructive" });
+    } else {
+      toast({ title: "Demand Rejected", description: "The request has been rejected." });
+      setLocalDemands(prev => prev.map(d => d.id === id ? { ...d, status: 'Rejected' } : d));
+      setSelectedReq(null);
+    }
+  };
+
+  const handleRaiseSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedItemId || !qtyInput || parseFloat(qtyInput) <= 0) {
+      toast({ title: "Validation Error", description: "Please select a material and enter a valid quantity.", variant: "destructive" });
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    // Dynamically retrieve the valid user ID
+    // We check if sessionUser.id exists in our database users to prevent foreign key constraint violations
+    const isValidUser = dbUsers && dbUsers.some(u => u.id === sessionUser?.id);
+    const managerId = isValidUser 
+      ? sessionUser.id 
+      : (dbUsers && dbUsers.length > 0 ? (dbUsers.find(u => u.role === 'SITE_MANAGER')?.id || dbUsers[0].id) : "workos-site-001");
+    
+    const res = await createDemandRequest(
+      selectedItemId,
+      parseFloat(qtyInput),
+      managerId,
+      towerInput,
+      notesInput,
+      requiredDateInput
+    );
+    setIsSubmitting(false);
+
+    if (res.error) {
+      toast({ title: "Failed to submit", description: res.error, variant: "destructive" });
+    } else {
+      toast({ title: "Requisition Sent", description: "Your material demand requisition has been submitted." });
+      setIsRaiseFormOpen(false);
+      // Reset form
+      setSelectedItemId("");
+      setQtyInput("");
+      setNotesInput("");
+      setRequiredDateInput("");
+
+      // Optimistically append or trigger full data reload
+      window.location.reload();
+    }
+  };
+
+  const selectedItemDetails = localInventory.find(item => item.id === selectedItemId);
+
+  const demandRequests = localDemands.map(r => {
+    const item = r.item || r.material || {};
+    const reqUser = r.requested_by || r.requested_by_user || {};
+    const appUser = r.approved_by || r.approved_by_user || {};
+    const unit = item.unit_of_measurement || item.unit || 'units';
+    const name = item.name || item.item_name || 'Material';
+    const quantity = r.quantity_requested !== undefined ? r.quantity_requested : (r.quantity !== undefined ? r.quantity : 0);
+    const requiredDate = r.required_by || r.required_date;
+
+    return {
+      id: r.id,
+      shortId: r.id?.substring(0,8) || 'Unknown',
+      by: reqUser.name || 'Unknown User',
+      role: reqUser.role || 'Staff',
+      material: name,
+      qty: `${quantity} ${unit}`,
+      qtyVal: quantity,
+      itemId: item.id || r.item_id || '',
+      site: r.project_tower || (r.project?.name) || 'Site',
+      priority: r.priority || 'Normal',
+      date: new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      requiredBy: requiredDate ? new Date(requiredDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A',
+      status: r.status || 'Pending',
+      reviewer: appUser.name || null,
+      stock: item.current_stock_level !== undefined ? item.current_stock_level : (item.quantity !== undefined ? item.quantity : 0),
+      unit: unit
+    };
+  });
 
   const filteredRequests = demandRequests.filter(r => activeTab === 'all' || r.status.toLowerCase() === activeTab);
 
@@ -118,74 +234,140 @@ export default function DemandsClient({ initialDemands }: { initialDemands: any[
 
       {/* RAISE NEW REQUEST CONFIG */}
       <section className={`transition-all duration-300 ${isRaiseFormOpen ? 'block' : 'hidden'}`}>
-        <PearlCard className="p-6 border-[#0066FF] shadow-sm shadow-blue-100">
-           <div className="flex justify-between items-center mb-6 border-b border-[#E8ECF0] pb-4">
-              <div>
-                <h3 className="text-lg font-bold text-[#0066FF] flex items-center gap-2"><Plus className="w-5 h-5"/> Raise New Material Demand</h3>
-                <p className="text-sm text-slate-500 mt-1">Submit a requirement for site operations. Approvals typically take 2-4 hours.</p>
-              </div>
-              <Button variant="ghost" onClick={() => setIsRaiseFormOpen(false)} className="text-slate-500 hover:bg-slate-100 rounded-[8px]">Cancel</Button>
-           </div>
-           
-           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              <div className="space-y-4 col-span-2">
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                   <div className="space-y-2">
-                     <Label className="font-semibold text-slate-700">Material Required</Label>
-                     <Select>
-                       <SelectTrigger className="bg-slate-50 h-10 rounded-[8px]"><SelectValue placeholder="Search material..." /></SelectTrigger>
-                       <SelectContent>
-                         <SelectItem value="c1">Cement OPC 53</SelectItem>
-                         <SelectItem value="s1">Steel TMT 12mm</SelectItem>
-                       </SelectContent>
-                     </Select>
+        <form onSubmit={handleRaiseSubmit}>
+          <PearlCard className="p-6 border-[#0066FF] shadow-sm shadow-blue-100 bg-white">
+             <div className="flex justify-between items-center mb-6 border-b border-[#E8ECF0] pb-4">
+                <div>
+                  <h3 className="text-lg font-bold text-[#0066FF] flex items-center gap-2"><Plus className="w-5 h-5"/> Raise New Material Demand</h3>
+                  <p className="text-sm text-slate-500 mt-1">Submit a requirement for site operations. Approvals typically take 2-4 hours.</p>
+                </div>
+                <Button type="button" variant="ghost" onClick={() => setIsRaiseFormOpen(false)} className="text-slate-500 hover:bg-slate-100 rounded-[8px]">Cancel</Button>
+             </div>
+             
+             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="space-y-4 col-span-2 text-left">
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                     <div className="space-y-2">
+                       <Label className="font-semibold text-slate-700">Material Required</Label>
+                       <Select value={selectedItemId} onValueChange={setSelectedItemId}>
+                         <SelectTrigger className="bg-slate-50 h-10 rounded-[8px] border-slate-200"><SelectValue placeholder="Search material..." /></SelectTrigger>
+                         <SelectContent className="bg-white">
+                           {localInventory.map((item) => (
+                             <SelectItem key={item.id} value={item.id}>{item.name} ({item.category})</SelectItem>
+                           ))}
+                         </SelectContent>
+                       </Select>
+                     </div>
+                     <div className="space-y-2">
+                       <Label className="font-semibold text-slate-700">Quantity Required {selectedItemDetails ? `(${selectedItemDetails.unit_of_measurement})` : ''}</Label>
+                       <Input 
+                         type="number" 
+                         step="0.01"
+                         placeholder="e.g. 50" 
+                         value={qtyInput}
+                         onChange={(e) => setQtyInput(e.target.value)}
+                         className="bg-slate-50 h-10 rounded-[8px] border-slate-200" 
+                         required
+                       />
+                     </div>
+                     <div className="space-y-2">
+                       <Label className="font-semibold text-slate-700">Project / Tower</Label>
+                       <Select value={towerInput} onValueChange={setTowerInput}>
+                         <SelectTrigger className="bg-slate-50 h-10 rounded-[8px] border-slate-200"><SelectValue /></SelectTrigger>
+                         <SelectContent className="bg-white">
+                           <SelectItem value="Tower A">Tower A</SelectItem>
+                           <SelectItem value="Tower B">Tower B</SelectItem>
+                           <SelectItem value="Tower C">Tower C</SelectItem>
+                         </SelectContent>
+                       </Select>
+                     </div>
+                     <div className="space-y-2">
+                       <Label className="font-semibold text-slate-700">Priority Level</Label>
+                       <Select value={priorityInput} onValueChange={setPriorityInput}>
+                         <SelectTrigger className="bg-slate-50 h-10 rounded-[8px] border-slate-200"><SelectValue /></SelectTrigger>
+                         <SelectContent className="bg-white">
+                           <SelectItem value="Urgent">Urgent</SelectItem>
+                           <SelectItem value="Normal">Normal</SelectItem>
+                           <SelectItem value="Low">Low</SelectItem>
+                         </SelectContent>
+                       </Select>
+                     </div>
+                     <div className="space-y-2 col-span-2">
+                       <Label className="font-semibold text-slate-700">Required By Date</Label>
+                       <Input 
+                         type="date" 
+                         value={requiredDateInput}
+                         onChange={(e) => setRequiredDateInput(e.target.value)}
+                         className="bg-slate-50 h-10 rounded-[8px] border-slate-200" 
+                         required
+                       />
+                     </div>
                    </div>
                    <div className="space-y-2">
-                     <Label className="font-semibold text-slate-700">Quantity</Label>
-                     <Input type="text" placeholder="e.g. 50 bags" className="bg-slate-50 h-10 rounded-[8px]" />
+                      <Label className="font-semibold text-slate-700">Justification / Usage Details</Label>
+                      <Textarea 
+                        placeholder="Explain why this material is needed..." 
+                        rows={3} 
+                        value={notesInput}
+                        onChange={(e) => setNotesInput(e.target.value)}
+                        className="bg-slate-50 rounded-[8px] border-slate-200" 
+                        required
+                      />
                    </div>
-                   <div className="space-y-2">
-                     <Label className="font-semibold text-slate-700">Project / Tower</Label>
-                     <Select>
-                       <SelectTrigger className="bg-slate-50 h-10 rounded-[8px]"><SelectValue placeholder="Select site" /></SelectTrigger>
-                       <SelectContent>
-                         <SelectItem value="t1">Tower A</SelectItem>
-                         <SelectItem value="t2">Tower B</SelectItem>
-                         <SelectItem value="t3">Tower C</SelectItem>
-                       </SelectContent>
-                     </Select>
-                   </div>
-                   <div className="space-y-2">
-                     <Label className="font-semibold text-slate-700">Priority Level</Label>
-                     <Select defaultValue="normal">
-                       <SelectTrigger className="bg-slate-50 h-10 rounded-[8px]"><SelectValue /></SelectTrigger>
-                       <SelectContent>
-                         <SelectItem value="urgent">Urgent</SelectItem>
-                         <SelectItem value="normal">Normal</SelectItem>
-                         <SelectItem value="low">Low</SelectItem>
-                       </SelectContent>
-                     </Select>
-                   </div>
-                   <div className="space-y-2">
-                     <Label className="font-semibold text-slate-700">Required By Date</Label>
-                     <Input type="date" className="bg-slate-50 h-10 rounded-[8px]" />
-                   </div>
-                 </div>
-                 <div className="space-y-2">
-                    <Label className="font-semibold text-slate-700">Justification / Usage Details</Label>
-                    <Textarea placeholder="Explain why this material is needed..." rows={3} className="bg-slate-50 rounded-[8px]" />
-                 </div>
-              </div>
-              <div className="bg-blue-50/50 border border-blue-100 rounded-[12px] p-5 flex flex-col h-full bg-gradient-to-b from-blue-50/50 to-white">
-                 <h4 className="font-bold text-[#0F172A] mb-4 flex items-center gap-2"><Info className="w-4 h-4 text-blue-500"/> Current Stock Lookup</h4>
-                 <div className="flex-1 text-center flex flex-col items-center justify-center space-y-3 opacity-60">
-                    <Package className="w-10 h-10 text-slate-400" />
-                    <p className="text-sm font-medium text-slate-500">Select a material to view current stock levels and alerts.</p>
-                 </div>
-                 <Button className="w-full mt-auto bg-[#0066FF] hover:bg-[#0052CC] text-white rounded-[8px] h-10 font-bold shadow-sm">Submit Request</Button>
-              </div>
-           </div>
-        </PearlCard>
+                </div>
+                
+                <div className="bg-blue-50/50 border border-blue-100 rounded-[12px] p-5 flex flex-col h-full bg-gradient-to-b from-blue-50/50 to-white text-left">
+                   <h4 className="font-bold text-[#0F172A] mb-4 flex items-center gap-2"><Info className="w-4 h-4 text-blue-500"/> Current Stock Lookup</h4>
+                   {selectedItemDetails ? (
+                     <div className="space-y-4 flex-1">
+                       <div className="p-3 bg-white rounded-lg border border-slate-100 shadow-sm">
+                         <p className="text-[10px] uppercase font-bold text-slate-400">Material Category</p>
+                         <p className="font-bold text-sm text-[#0F172A]">{selectedItemDetails.category}</p>
+                       </div>
+                       
+                       <div className="p-3 bg-white rounded-lg border border-slate-100 shadow-sm flex justify-between items-center">
+                         <div>
+                           <p className="text-[10px] uppercase font-bold text-slate-400">Current Stock</p>
+                           <p className="font-extrabold text-lg text-[#0F172A]">
+                             {selectedItemDetails.current_stock_level} <span className="text-xs font-semibold text-slate-500">{selectedItemDetails.unit_of_measurement}</span>
+                           </p>
+                         </div>
+                         <Badge variant="outline" className={`h-5 text-[9px] uppercase font-bold ${
+                           selectedItemDetails.current_stock_level > selectedItemDetails.min_threshold * 2 ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                           selectedItemDetails.current_stock_level > selectedItemDetails.min_threshold ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                           'bg-red-50 text-red-700 border-red-200'
+                         }`}>
+                           {selectedItemDetails.current_stock_level > selectedItemDetails.min_threshold * 2 ? 'Good' :
+                            selectedItemDetails.current_stock_level > selectedItemDetails.min_threshold ? 'Low' : 'Critical'}
+                         </Badge>
+                       </div>
+
+                       <div className="p-3 bg-white rounded-lg border border-slate-100 shadow-sm">
+                         <p className="text-[10px] uppercase font-bold text-slate-400 font-semibold">Min Alert Threshold</p>
+                         <p className="font-bold text-sm text-slate-700">{selectedItemDetails.min_threshold} {selectedItemDetails.unit_of_measurement}</p>
+                       </div>
+                       
+                       {selectedItemDetails.current_stock_level <= selectedItemDetails.min_threshold && (
+                         <div className="flex gap-2 items-start bg-red-50 border border-red-100 p-2.5 rounded-lg text-red-700 text-xs mt-1">
+                           <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                           <p className="font-medium">Warning: Current stock is below safety threshold! Ordering is highly recommended.</p>
+                         </div>
+                       )}
+                     </div>
+                   ) : (
+                     <div className="flex-1 text-center flex flex-col items-center justify-center space-y-3 opacity-60">
+                        <Package className="w-10 h-10 text-slate-400" />
+                        <p className="text-sm font-medium text-slate-500">Select a material to view current stock levels and alerts.</p>
+                     </div>
+                   )}
+                   <Button type="submit" disabled={isSubmitting} className="w-full mt-auto bg-[#0066FF] hover:bg-[#0052CC] text-white rounded-[8px] h-10 font-bold shadow-sm flex items-center justify-center gap-1.5">
+                     {isSubmitting && <Loader2 className="animate-spin w-4 h-4" />}
+                     Submit Request
+                   </Button>
+                </div>
+             </div>
+          </PearlCard>
+        </form>
       </section>
 
       {/* FILTER BAR & TABS */}
@@ -294,18 +476,28 @@ export default function DemandsClient({ initialDemands }: { initialDemands: any[
                                    </div>
                                 </div>
 
-                                {selectedReq.status === 'Pending' && (
+                                 {selectedReq.status === 'Pending' && (
                                    <div className="space-y-4">
                                       <div className="space-y-2">
                                         <Label className="font-semibold">Reviewer Notes</Label>
                                         <Textarea placeholder="Add comments before approving/rejecting..." className="rounded-[8px] bg-slate-50" />
                                       </div>
                                       <div className="flex gap-3 pt-2">
-                                        <Button className="flex-1 bg-[#10B981] hover:bg-[#059669] text-white rounded-[8px] h-11 font-bold text-[14px] shadow-sm flex items-center gap-2">
-                                          <CheckCircle className="w-4 h-4" /> Approve & Allocate
+                                        <Button 
+                                          className="flex-1 bg-[#10B981] hover:bg-[#059669] text-white rounded-[8px] h-11 font-bold text-[14px] shadow-sm flex items-center justify-center gap-2"
+                                          onClick={() => handleApprove(selectedReq.id)}
+                                          disabled={isActionLoading}
+                                        >
+                                          {isActionLoading ? <Loader2 className="animate-spin w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
+                                          Approve & Allocate
                                         </Button>
-                                        <Button className="flex-1 bg-white hover:bg-red-50 text-red-600 border border-red-200 rounded-[8px] h-11 font-bold text-[14px] shadow-sm flex items-center gap-2">
-                                          <XCircle className="w-4 h-4" /> Reject Request
+                                        <Button 
+                                          className="flex-1 bg-white hover:bg-red-50 text-red-600 border border-red-200 rounded-[8px] h-11 font-bold text-[14px] shadow-sm flex items-center justify-center gap-2"
+                                          onClick={() => handleReject(selectedReq.id)}
+                                          disabled={isActionLoading}
+                                        >
+                                          {isActionLoading ? <Loader2 className="animate-spin w-4 h-4" /> : <XCircle className="w-4 h-4" />}
+                                          Reject Request
                                         </Button>
                                       </div>
                                    </div>

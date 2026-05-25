@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 import { ModuleSwitcher } from "@/components/shared/ModuleSwitcher"
+import { UserProfileDropdown } from "@/components/shared/UserProfileDropdown"
 
 export default function SalesLayout({ children }: { children: ReactNode }) {
   
@@ -153,9 +154,7 @@ export default function SalesLayout({ children }: { children: ReactNode }) {
               <HelpCircle className="h-5 w-5" />
             </button>
             
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-[#0066FF] to-[#6366F1] text-white font-bold shadow-sm ml-1 ring-2 ring-white cursor-pointer hover:ring-blue-100 transition-all">
-              {user.firstName[0]}
-            </div>
+            <UserProfileDropdown />
           </div>
         </header>
 

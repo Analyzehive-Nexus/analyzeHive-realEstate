@@ -7,6 +7,7 @@ import { DashboardSidebar } from "./components/dashboard-sidebar"
 import { Bell, Search, HelpCircle, ChevronRight, Download } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ModuleSwitcher } from "@/components/shared/ModuleSwitcher"
+import { UserProfileDropdown } from "@/components/shared/UserProfileDropdown"
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   
@@ -79,10 +80,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               <button className="text-slate-500 hover:text-slate-800 transition-colors h-9 w-9 flex items-center justify-center rounded-full hover:bg-slate-100 hidden sm:flex">
                 <HelpCircle className="h-5 w-5" />
               </button>
-              
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-[#0066FF] to-[#6366F1] text-white font-bold shadow-sm ml-1 ring-2 ring-white cursor-pointer hover:ring-blue-100 transition-all">
-                {user.firstName[0]}
-              </div>
+              <UserProfileDropdown />
             </div>
           </div>
           <div className="flex items-center h-[45px] gap-6">

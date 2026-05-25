@@ -26,23 +26,46 @@ export async function GET(req: NextRequest) {
 
     let role = 'MD'; // default
     let userId = user.id;
+    let userName = email.split('@')[0];
 
     const { data: userRecord, error } = await supabaseAdmin
       .from('users')
-      .select('id, role')
+      .select('id, role, name')
       .eq('email', email)
       .single();
 
     if (userRecord) {
       role = userRecord.role;
       userId = userRecord.id;
+      if (userRecord.name) {
+        userName = userRecord.name;
+      }
     } else {
-      console.warn(`User ${email} not found in Supabase. Using default role (MD).`);
+      console.warn(`User ${email} not found in Supabase. Registering profile dynamically in 'users' table.`);
+      const initials = userName.substring(0, 2).toUpperCase();
+      const { data: newUser, error: insertError } = await supabaseAdmin
+        .from('users')
+        .insert({
+          id: userId,
+          email: email,
+          name: userName,
+          role: role,
+          avatar_initials: initials.length === 2 ? initials : (initials + 'A'),
+          status: 'Active'
+        })
+        .select()
+        .single();
+      
+      if (insertError) {
+        console.error("Failed to dynamically insert user record:", insertError.message);
+      } else if (newUser) {
+        console.log("Successfully created database user profile for:", email);
+      }
     }
 
     const cookieStore = cookies();
     cookieStore.set('user_id', userId, {
-      httpOnly: true,
+      httpOnly: false,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       path: '/',
@@ -50,7 +73,7 @@ export async function GET(req: NextRequest) {
     });
 
     cookieStore.set('user_role', role, {
-      httpOnly: true,
+      httpOnly: false,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       path: '/',
@@ -58,7 +81,15 @@ export async function GET(req: NextRequest) {
     });
 
     cookieStore.set('user_email', email, {
-      httpOnly: true,
+      httpOnly: false,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 60 * 60 * 24 * 7,
+    });
+
+    cookieStore.set('user_name', userName, {
+      httpOnly: false,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       path: '/',
@@ -107,9 +138,7 @@ export async function GET(req: NextRequest) {
     if (!hasCompany) {
       redirectPath = '/onboarding';
     } else {
-      if (role === 'VP_SALES' || role === 'BROKER') redirectPath = '/sales';
-      if (role === 'SITE_MANAGER' || role === 'ADMIN') redirectPath = '/construction';
-      if (role === 'MD') redirectPath = '/command-center';
+      redirectPath = '/command-center';
     }
 
     return NextResponse.redirect(new URL(redirectPath, req.url));

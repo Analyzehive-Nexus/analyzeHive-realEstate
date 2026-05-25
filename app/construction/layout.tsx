@@ -21,6 +21,7 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ModuleSwitcher } from "@/components/shared/ModuleSwitcher"
+import { UserProfileDropdown } from "@/components/shared/UserProfileDropdown"
 import { createBrowserClient } from "@/lib/supabase-browser"
 import { 
   fetchNotificationsList, 
@@ -377,9 +378,7 @@ export default function ConstructionLayout({ children }: { children: ReactNode }
               <HelpCircle className="h-5 w-5" />
             </button>
             
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-[#0066FF] to-[#6366F1] text-white font-bold shadow-sm ml-1 ring-2 ring-white cursor-pointer hover:ring-blue-100 transition-all">
-              {user.firstName[0]}
-            </div>
+            <UserProfileDropdown />
           </div>
         </header>
 

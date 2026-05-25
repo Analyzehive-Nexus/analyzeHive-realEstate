@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { UserProfileDropdown } from "@/components/shared/UserProfileDropdown";
 import { Building2, LayoutDashboard, TrendingUp } from "lucide-react";
 
 export default function CommandCenterPage() {
@@ -34,6 +35,17 @@ export default function CommandCenterPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-8">
       <div className="max-w-6xl mx-auto">
+        {/* Top Header Bar */}
+        <div className="flex justify-between items-center mb-12 bg-white/60 backdrop-blur-md px-6 py-4 rounded-2xl border border-slate-200/50 shadow-sm">
+          <div className="flex items-center gap-2.5">
+            <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-md shadow-blue-500/20 active:scale-95 transition-transform">
+              <Building2 className="w-5 h-5 text-white" />
+            </div>
+            <span className="text-[17px] font-black tracking-tight text-slate-800">Analyzehive <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">Flow</span></span>
+          </div>
+          <UserProfileDropdown />
+        </div>
+
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-slate-900 mb-2">Command Center</h1>
           <p className="text-slate-500">Select a module to continue</p>

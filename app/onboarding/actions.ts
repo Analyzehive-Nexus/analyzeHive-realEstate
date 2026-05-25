@@ -14,21 +14,28 @@ export async function saveCompanySetup(name: string, logo: string, city: string)
     const cookieStore = cookies();
     if (!cookieStore.get("user_id")?.value) {
       cookieStore.set("user_id", userId, {
-        httpOnly: true,
+        httpOnly: false,
         secure: process.env.NODE_ENV === "production",
         sameSite: "lax",
         path: "/",
         maxAge: 60 * 60 * 24 * 7,
       });
       cookieStore.set("user_email", "admin@analyzehive.com", {
-        httpOnly: true,
+        httpOnly: false,
         secure: process.env.NODE_ENV === "production",
         sameSite: "lax",
         path: "/",
         maxAge: 60 * 60 * 24 * 7,
       });
       cookieStore.set("user_role", "MD", {
-        httpOnly: true,
+        httpOnly: false,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/",
+        maxAge: 60 * 60 * 24 * 7,
+      });
+      cookieStore.set("user_name", "Admin User", {
+        httpOnly: false,
         secure: process.env.NODE_ENV === "production",
         sameSite: "lax",
         path: "/",
