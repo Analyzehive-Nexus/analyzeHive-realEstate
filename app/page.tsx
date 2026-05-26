@@ -4,15 +4,14 @@ import { Building2 } from "lucide-react";
 export const dynamic = "force-dynamic";
 
 export default async function LoginPage() {
-  const signInUrl = await getSignInUrl({
-    redirectUri: process.env.WORKOS_REDIRECT_URI,
-  });
+  // Use WORKOS_REDIRECT_URI if set; otherwise fallback to localhost for development
+  const redirectUri = process.env.WORKOS_REDIRECT_URI || 'http://localhost:3000/api/auth/callback';
+  const signInUrl = await getSignInUrl({ redirectUri });
 
   return (
     <div className="flex min-h-screen bg-white font-sans">
       {/* Left side: branding/gradient */}
       <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-blue-700 to-blue-900 flex-col justify-center p-16 text-white relative overflow-hidden">
-        {/* Decorative circle shapes like in the image */}
         <div className="absolute -bottom-24 -left-24 w-96 h-96 border-[40px] border-blue-400/10 rounded-full" />
         <div className="absolute -bottom-48 -left-48 w-[600px] h-[600px] border-[20px] border-blue-400/5 rounded-full" />
         
