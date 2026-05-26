@@ -129,6 +129,21 @@ CREATE POLICY "service_role_full_access" ON public.notifications FOR ALL USING (
 );
 ALTER TABLE public.daily_progress ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "service_role_full_access" ON public.daily_progress FOR ALL USING (true) WITH CHECK (true);`,
+
+      financial_ledger: `CREATE TABLE IF NOT EXISTS public.financial_ledger (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  transaction_type TEXT CHECK (transaction_type IN ('Income', 'Expense')),
+  amount NUMERIC NOT NULL,
+  category TEXT,
+  transaction_date DATE NOT NULL,
+  description TEXT,
+  status TEXT DEFAULT 'Approved',
+  project_id UUID REFERENCES public.projects(id) ON DELETE SET NULL,
+  logged_by_user_id UUID REFERENCES public.users(id),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+ALTER TABLE public.financial_ledger ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "service_role_full_access" ON public.financial_ledger FOR ALL USING (true) WITH CHECK (true);`,
     };
 
     for (const t of missing) {

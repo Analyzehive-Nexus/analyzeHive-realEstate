@@ -36,6 +36,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
+import { Textarea } from "@/components/ui/textarea";
 import { EmptyState } from "@/components/ui/empty-state";
 
 type Visit = {
@@ -69,6 +70,17 @@ export default function VisitsClient() {
   const [newDateTime, setNewDateTime] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // New Visit dialog state
+  const [newVisitOpen, setNewVisitOpen] = useState(false);
+  const [newVisitForm, setNewVisitForm] = useState({
+    leadId: "",
+    flatId: "",
+    visitDate: "",
+    visitTime: "",
+    brokerId: "",
+    notes: "",
+  });
+
   // Helper to format datetime-local input value
   const formatDateTimeLocal = (date: string) => {
     const d = new Date(date);
@@ -83,7 +95,7 @@ export default function VisitsClient() {
     const { data: visitsData, error: visitsError } = await supabase
       .from("site_visits")
       .select(`
-        id,
+        id:visit_id,
         scheduled_at,
         status,
         notes,
@@ -177,7 +189,7 @@ export default function VisitsClient() {
     const { error } = await supabase
       .from("site_visits")
       .update({ status: newStatus, updated_at: new Date().toISOString() })
-      .eq("id", visitId);
+      .eq("visit_id", visitId);
 
     if (error) {
       toast({ title: "Update failed", description: error.message, variant: "destructive" });
@@ -208,7 +220,7 @@ export default function VisitsClient() {
         status: "Scheduled",
         updated_at: new Date().toISOString(),
       })
-      .eq("id", selectedVisit.id);
+      .eq("visit_id", selectedVisit.id);
 
     if (error) {
       toast({ title: "Reschedule failed", description: error.message, variant: "destructive" });
@@ -227,13 +239,95 @@ export default function VisitsClient() {
     // Optimistic removal
     setVisits((prev) => prev.filter((v) => v.id !== visitId));
 
-    const { error } = await supabase.from("site_visits").delete().eq("id", visitId);
+    const { error } = await supabase.from("site_visits").delete().eq("visit_id", visitId);
     if (error) {
       toast({ title: "Delete failed", description: error.message, variant: "destructive" });
       fetchData();
     } else {
       toast({ title: "Visit deleted" });
     }
+  };
+
+  // Create new site visit
+  const handleCreateVisit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newVisitForm.leadId || !newVisitForm.flatId || !newVisitForm.visitDate || !newVisitForm.visitTime) {
+      toast({
+        title: "Required fields missing",
+        description: "Please select lead, flat, date and time",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    const scheduledAt = new Date(
+      newVisitForm.visitDate + "T" + newVisitForm.visitTime + ":00"
+    ).toISOString();
+
+    const { data, error } = await supabase
+      .from("site_visits")
+      .insert({
+        lead_id: newVisitForm.leadId,
+        flat_id: newVisitForm.flatId,
+        assigned_user_id: newVisitForm.brokerId || null,
+        scheduled_at: scheduledAt,
+        status: "Scheduled",
+        reminder_sent: false,
+        notes: newVisitForm.notes || null,
+        created_at: new Date().toISOString(),
+      })
+      .select(`
+        id:visit_id,
+        scheduled_at,
+        status,
+        notes,
+        lead:leads_customers(id, name, phone, email),
+        flat:flats_inventory(flat_id, flat_number, project),
+        broker:users(id, name)
+      `)
+      .single();
+
+    if (error) {
+      toast({
+        title: "Failed to schedule visit",
+        description: error.message,
+        variant: "destructive",
+      });
+      setIsSubmitting(false);
+      return;
+    }
+
+    // Update lead status to Site Visit Scheduled
+    await supabase
+      .from("leads_customers")
+      .update({
+        status: "Site Visit Scheduled",
+        last_activity: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", newVisitForm.leadId);
+
+    toast({
+      title: "Site visit scheduled successfully!",
+      description: `Visit scheduled for ${(data as any)?.lead?.name || "lead"}`,
+    });
+
+    // Reset and close
+    setNewVisitForm({
+      leadId: "",
+      flatId: "",
+      visitDate: "",
+      visitTime: "",
+      brokerId: "",
+      notes: "",
+    });
+    setNewVisitOpen(false);
+    setIsSubmitting(false);
+
+    // Refresh lists
+    fetchData();
   };
 
   const filteredVisits = getFilteredVisits();
@@ -269,8 +363,7 @@ export default function VisitsClient() {
         </div>
         <Button
           onClick={() => {
-            // You can implement a "Schedule New Visit" dialog here if needed
-            window.location.href = "/sales/leads";
+            setNewVisitOpen(true);
           }}
           className="bg-[#0066FF] hover:bg-[#0052CC]"
         >
@@ -444,6 +537,149 @@ export default function VisitsClient() {
               Confirm Reschedule
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* New Visit Dialog */}
+      <Dialog
+        open={newVisitOpen}
+        onOpenChange={(open) => {
+          setNewVisitOpen(open);
+          if (!open) {
+            setNewVisitForm({
+              leadId: "",
+              flatId: "",
+              visitDate: "",
+              visitTime: "",
+              brokerId: "",
+              notes: "",
+            });
+          }
+        }}
+      >
+        <DialogContent className="max-w-[480px] rounded-2xl p-0 overflow-hidden">
+          <div className="bg-[#0A1628] px-6 py-5">
+            <DialogTitle className="text-white text-lg font-semibold">
+              Schedule New Visit
+            </DialogTitle>
+            <p className="text-blue-300 text-sm mt-1">
+              Select lead, flat inventory, date, and assign a broker.
+            </p>
+          </div>
+
+          <form onSubmit={handleCreateVisit} className="px-6 py-5 space-y-4">
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">Select Lead *</Label>
+              <Select
+                value={newVisitForm.leadId}
+                onValueChange={(val) => setNewVisitForm((p) => ({ ...p, leadId: val }))}
+              >
+                <SelectTrigger className="rounded-[10px] bg-white border-gray-200">
+                  <SelectValue placeholder="Select a customer / lead" />
+                </SelectTrigger>
+                <SelectContent>
+                  {leads.map((l) => (
+                    <SelectItem key={l.id} value={l.id}>
+                      {l.name} — {l.phone}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">Select Flat *</Label>
+              <Select
+                value={newVisitForm.flatId}
+                onValueChange={(val) => setNewVisitForm((p) => ({ ...p, flatId: val }))}
+              >
+                <SelectTrigger className="rounded-[10px] bg-white border-gray-200">
+                  <SelectValue placeholder="Choose inventory flat" />
+                </SelectTrigger>
+                <SelectContent>
+                  {flats.map((flat) => (
+                    <SelectItem key={flat.flat_id} value={flat.flat_id}>
+                      {flat.project} — {flat.flat_number}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">Visit Date *</Label>
+                <Input
+                  type="date"
+                  value={newVisitForm.visitDate}
+                  min={new Date().toISOString().split("T")[0]}
+                  onChange={(e) => setNewVisitForm((p) => ({ ...p, visitDate: e.target.value }))}
+                  className="rounded-[10px]"
+                  required
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">Visit Time *</Label>
+                <Input
+                  type="time"
+                  value={newVisitForm.visitTime}
+                  onChange={(e) => setNewVisitForm((p) => ({ ...p, visitTime: e.target.value }))}
+                  className="rounded-[10px]"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">Assign Broker</Label>
+              <Select
+                value={newVisitForm.brokerId}
+                onValueChange={(val) => setNewVisitForm((p) => ({ ...p, brokerId: val }))}
+              >
+                <SelectTrigger className="rounded-[10px] bg-white border-gray-200">
+                  <SelectValue placeholder="Select broker" />
+                </SelectTrigger>
+                <SelectContent>
+                  {brokers.map((b) => (
+                    <SelectItem key={b.id} value={b.id}>
+                      {b.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">Notes</Label>
+              <Textarea
+                placeholder="Special instructions or notes..."
+                value={newVisitForm.notes}
+                onChange={(e) => setNewVisitForm((p) => ({ ...p, notes: e.target.value }))}
+                className="rounded-[10px] resize-none"
+                rows={2}
+              />
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                className="flex-1 bg-[#0066FF] hover:bg-[#0052CC] text-white font-semibold rounded-[10px] h-10"
+              >
+                {isSubmitting ? "Scheduling..." : "Schedule Visit"}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="rounded-[10px] h-10 px-6"
+                onClick={() => {
+                  setNewVisitOpen(false);
+                }}
+              >
+                Cancel
+              </Button>
+            </div>
+          </form>
         </DialogContent>
       </Dialog>
     </div>

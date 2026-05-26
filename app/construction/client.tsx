@@ -462,79 +462,80 @@ export default function ConstructionClient({
 
   return (
     <div className="p-8 max-w-[1800px] mx-auto pb-24 space-y-10 font-sans text-[#0F172A]">
-      
-      {/* SECTION 1 - KPI CARDS */}
+            {/* SECTION 1 - KPI CARDS */}
       <section>
         <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-          <InteractivePearlCard className="p-5">
-            <CardContent className="p-0 flex flex-row items-center gap-6">
-              <div className="h-16 w-16 rounded-[12px] bg-gradient-to-br from-[#0066FF] to-blue-400 flex items-center justify-center text-white shadow-lg shadow-blue-500/30 shrink-0">
-                <Package className="h-8 w-8" />
+          <Card className="group overflow-hidden bg-gradient-to-br from-blue-50 to-sky-50/30 border border-blue-100/80 hover:border-blue-300 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.02)] hover:shadow-[0_12px_30px_-8px_rgba(0,0,0,0.08)] rounded-[24px] transition-all duration-300 hover:-translate-y-1">
+            <CardContent className="p-6 flex flex-col justify-between h-full relative">
+              <div className="absolute -bottom-8 -right-8 w-24 h-24 rounded-full bg-white/40 blur-xl pointer-events-none group-hover:scale-150 transition-transform duration-500" />
+              <div className="flex items-center justify-between">
+                <span className="text-[12px] font-black text-slate-400 uppercase tracking-widest leading-none">Total Materials</span>
+                <div className="p-2.5 rounded-2xl bg-blue-600 text-white shadow-md shadow-blue-500/20 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                  <Package className="h-5 w-5" />
+                </div>
               </div>
-              <div className="flex flex-col justify-center w-full">
-                <div className="flex justify-between items-start w-full">
-                  <div>
-                    <h3 className="text-[32px] font-bold text-[#0F172A] leading-tight tracking-tight">{localInventoryStats?.total || 0}</h3>
-                    <p className="text-[12px] font-semibold text-[#64748B] uppercase tracking-[0.05em] mt-0.5">Total Materials</p>
-                  </div>
+              <div className="mt-4 space-y-1 text-left">
+                <p className="text-3xl font-black text-slate-900 tracking-tight leading-none">{localInventoryStats?.total || 0}</p>
+                <div className="flex items-center gap-1.5 pt-1">
+                  <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-slate-100/80 text-slate-500">Active Stock Items</span>
                 </div>
               </div>
             </CardContent>
-          </InteractivePearlCard>
-          
-          <InteractivePearlCard className="p-5">
-            <CardContent className="p-0 flex flex-row items-center gap-6">
-              <div className="h-16 w-16 rounded-[12px] bg-gradient-to-br from-orange-500 to-amber-400 flex items-center justify-center text-white shadow-lg shadow-orange-500/30 shrink-0">
-                <ClipboardList className="h-8 w-8" />
-              </div>
-              <div className="flex flex-col justify-center w-full">
-                <div className="flex justify-between items-start w-full">
-                  <div>
-                    <h3 className="text-[32px] font-bold text-[#0F172A] leading-tight tracking-tight">{(localDemands || []).filter((d: any) => d.status === 'Pending').length}</h3>
-                    <p className="text-[12px] font-semibold text-[#64748B] uppercase tracking-[0.05em] mt-0.5">Pending Approvals</p>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </InteractivePearlCard>
+          </Card>
 
-          <InteractivePearlCard className="p-5">
-            <CardContent className="p-0 flex flex-row items-center gap-6">
-              <div className="h-16 w-16 rounded-[12px] bg-gradient-to-br from-green-500 to-emerald-400 flex items-center justify-center text-white shadow-lg shadow-green-500/30 shrink-0">
-                <Truck className="h-8 w-8" />
+          <Card className="group overflow-hidden bg-gradient-to-br from-orange-50 to-amber-50/30 border border-orange-100/80 hover:border-orange-300 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.02)] hover:shadow-[0_12px_30px_-8px_rgba(0,0,0,0.08)] rounded-[24px] transition-all duration-300 hover:-translate-y-1">
+            <CardContent className="p-6 flex flex-col justify-between h-full relative">
+              <div className="absolute -bottom-8 -right-8 w-24 h-24 rounded-full bg-white/40 blur-xl pointer-events-none group-hover:scale-150 transition-transform duration-500" />
+              <div className="flex items-center justify-between">
+                <span className="text-[12px] font-black text-slate-400 uppercase tracking-widest leading-none">Pending Approvals</span>
+                <div className="p-2.5 rounded-2xl bg-orange-500 text-white shadow-md shadow-orange-500/20 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                  <ClipboardList className="h-5 w-5" />
+                </div>
               </div>
-              <div className="flex flex-col justify-center w-full">
-                <div className="flex justify-between items-start w-full">
-                  <div>
-                    <h3 className="text-[32px] font-bold text-[#0F172A] leading-tight tracking-tight">{localAssetsStats?.active || 0}</h3>
-                    <p className="text-[12px] font-semibold text-[#64748B] uppercase tracking-[0.05em] mt-0.5">Active Assets</p>
-                  </div>
-                  <div className="flex items-center gap-1 bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full text-[11px] font-bold">
-                    {localAssetsStats?.maintenance || 0} maint.
-                  </div>
+              <div className="mt-4 space-y-1 text-left">
+                <p className="text-3xl font-black text-slate-900 tracking-tight leading-none">{(localDemands || []).filter((d: any) => d.status === 'Pending').length}</p>
+                <div className="flex items-center gap-1.5 pt-1">
+                  <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-slate-100/80 text-slate-500">Requires MD/Admin signoff</span>
                 </div>
               </div>
             </CardContent>
-          </InteractivePearlCard>
+          </Card>
 
-          <InteractivePearlCard className="p-5">
-            <CardContent className="p-0 flex flex-row items-center gap-6">
-              <div className="h-16 w-16 rounded-[12px] bg-gradient-to-br from-purple-600 to-purple-400 flex items-center justify-center text-white shadow-lg shadow-purple-500/30 shrink-0">
-                <HardHat className="h-8 w-8" />
+          <Card className="group overflow-hidden bg-gradient-to-br from-emerald-50 to-teal-50/30 border border-emerald-100/80 hover:border-emerald-300 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.02)] hover:shadow-[0_12px_30px_-8px_rgba(0,0,0,0.08)] rounded-[24px] transition-all duration-300 hover:-translate-y-1">
+            <CardContent className="p-6 flex flex-col justify-between h-full relative">
+              <div className="absolute -bottom-8 -right-8 w-24 h-24 rounded-full bg-white/40 blur-xl pointer-events-none group-hover:scale-150 transition-transform duration-500" />
+              <div className="flex items-center justify-between">
+                <span className="text-[12px] font-black text-slate-400 uppercase tracking-widest leading-none">Active Assets</span>
+                <div className="p-2.5 rounded-2xl bg-emerald-600 text-white shadow-md shadow-emerald-500/20 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                  <Truck className="h-5 w-5" />
+                </div>
               </div>
-              <div className="flex flex-col justify-center w-full">
-                <div className="flex justify-between items-start w-full">
-                  <div>
-                    <h3 className="text-[32px] font-bold text-[#0F172A] leading-tight tracking-tight">{localAttendanceStats?.total || 0}</h3>
-                    <p className="text-[12px] font-semibold text-[#64748B] uppercase tracking-[0.05em] mt-0.5">Workers Today</p>
-                  </div>
-                  <div className="flex items-center gap-1 bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full text-[11px] font-bold">
-                    {presentPercent}% att.
-                  </div>
+              <div className="mt-4 space-y-1 text-left">
+                <p className="text-3xl font-black text-slate-900 tracking-tight leading-none">{localAssetsStats?.active || 0}</p>
+                <div className="flex items-center gap-1.5 pt-1">
+                  <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-100/85 text-emerald-800 font-black">{localAssetsStats?.maintenance || 0} in Maintenance</span>
                 </div>
               </div>
             </CardContent>
-          </InteractivePearlCard>
+          </Card>
+
+          <Card className="group overflow-hidden bg-gradient-to-br from-purple-50 to-fuchsia-50/30 border border-purple-100/80 hover:border-purple-300 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.02)] hover:shadow-[0_12px_30px_-8px_rgba(0,0,0,0.08)] rounded-[24px] transition-all duration-300 hover:-translate-y-1">
+            <CardContent className="p-6 flex flex-col justify-between h-full relative">
+              <div className="absolute -bottom-8 -right-8 w-24 h-24 rounded-full bg-white/40 blur-xl pointer-events-none group-hover:scale-150 transition-transform duration-500" />
+              <div className="flex items-center justify-between">
+                <span className="text-[12px] font-black text-slate-400 uppercase tracking-widest leading-none">Workers Today</span>
+                <div className="p-2.5 rounded-2xl bg-purple-600 text-white shadow-md shadow-purple-500/20 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                  <HardHat className="h-5 w-5" />
+                </div>
+              </div>
+              <div className="mt-4 space-y-1 text-left">
+                <p className="text-3xl font-black text-slate-900 tracking-tight leading-none">{localAttendanceStats?.total || 0}</p>
+                <div className="flex items-center gap-1.5 pt-1">
+                  <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-purple-100/85 text-purple-800 font-black">{presentPercent}% Attendance</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </section>
 

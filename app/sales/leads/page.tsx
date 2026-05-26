@@ -12,8 +12,10 @@ import { deleteLeadAction } from './actions';
 import { 
   Users, UserPlus, PhoneCall, Calendar, CheckCircle2, 
   Search, Download, Plus, Eye, MessageCircle, Edit, Trash2,
-  MapPin, Phone, Building2, Loader2, Filter, XCircle, FileText
+  MapPin, Phone, Building2, Loader2, Filter, XCircle, FileText,
+  Upload, FileSpreadsheet, AlertTriangle
 } from "lucide-react";
+import { parseLeadsCSV } from "@/lib/csv-parser";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -72,6 +74,12 @@ export default function LeadsPage() {
   const [brokers, setBrokers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // CSV Import States
+  const [showImportDialog, setShowImportDialog] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importResult, setImportResult] = useState<any | null>(null);
+  const [importLoading, setImportLoading] = useState(false);
 
   // Filter states
   const [searchQuery, setSearchQuery] = useState('');
@@ -512,6 +520,108 @@ export default function LeadsPage() {
     toast({ title: 'CSV exported successfully' });
   };
 
+  // Download Sample CSV template
+  const downloadSampleCSV = () => {
+    const headers = ['Name', 'Phone', 'Email', 'Source', 'Status', 'Project Interest', 'Flat Type Interest', 'Notes'];
+    const rows = [
+      ['Sir Barksalot', '+91 98765 00001', 'bark@woofmail.com', 'Meta', 'New', 'Tower A', '3BHK', 'Claims he is a royal dog looking for a penthouse.'],
+      ['Count Dracula', '+91 98765 00002', 'dracula@transylvania.com', 'Google', 'New', 'Villas', 'Villa', 'Prefers no sunlight. Coffin storage space needed.'],
+      ['Invalid Record Example', '', 'error@missingphone.com', 'Direct', 'New', '', '', 'This row will fail because phone number is empty.']
+    ];
+    const csvContent = [headers, ...rows]
+      .map(r => r.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+      .join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'leads_import_template.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+    toast({ title: 'Template downloaded', description: 'Fill the spreadsheet template and upload.' });
+  };
+
+  // Handle CSV file selection & parsing
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.endsWith('.csv')) {
+      toast({
+        title: 'Invalid File',
+        description: 'Please upload a valid .CSV file',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setImportFile(file);
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result as string;
+      const parsed = parseLeadsCSV(text);
+      setImportResult(parsed);
+    };
+    reader.readAsText(file);
+  };
+
+  // Handle bulk insertion of leads
+  const handleConfirmImport = async () => {
+    if (!importResult || importResult.valid.length === 0) {
+      toast({
+        title: 'No Valid Leads',
+        description: 'There are no valid leads to import.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setImportLoading(true);
+
+    const leadsToInsert = importResult.valid.map((l: any) => ({
+      name: l.name,
+      phone: l.phone,
+      email: l.email,
+      source: l.source,
+      status: l.status,
+      project_interest: l.project_interest,
+      flat_type_interest: l.flat_type_interest,
+      notes: l.notes,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      last_activity: new Date().toISOString()
+    }));
+
+    const { error } = await supabase
+      .from('leads_customers')
+      .insert(leadsToInsert);
+
+    if (error) {
+      toast({
+        title: 'Import Failed',
+        description: error.message,
+        variant: 'destructive'
+      });
+      setImportLoading(false);
+      return;
+    }
+
+    toast({
+      title: 'Import Successful',
+      description: `Successfully imported ${leadsToInsert.length} leads.`
+    });
+
+    // Reset states
+    setImportFile(null);
+    setImportResult(null);
+    setShowImportDialog(false);
+    setImportLoading(false);
+
+    // Refresh dashboard leads list
+    fetchLeads();
+  };
+
   if (error) {
     return (
       <div className="p-12 text-center space-y-4">
@@ -645,6 +755,9 @@ export default function LeadsPage() {
               </Select>
             </div>
             <div className="flex gap-3 w-full md:w-auto">
+              <Button onClick={() => setShowImportDialog(true)} variant="outline" className="rounded-[10px] border-gray-200 bg-white text-[#0F172A] font-semibold">
+                <Upload className="mr-2 h-4 w-4" /> Import CSV
+              </Button>
               <Button onClick={exportCSV} variant="outline" className="rounded-[10px] border-gray-200 bg-white text-[#0F172A] font-semibold">
                 <Download className="mr-2 h-4 w-4" /> Export
               </Button>
@@ -866,6 +979,223 @@ export default function LeadsPage() {
             >
               Cancel
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* IMPORT LEAD DIALOG */}
+      <Dialog open={showImportDialog} onOpenChange={(open) => {
+        setShowImportDialog(open);
+        if (!open) {
+          setImportFile(null);
+          setImportResult(null);
+        }
+      }}>
+        <DialogContent className="max-w-[620px] w-full rounded-2xl p-0 overflow-hidden max-h-[90vh]">
+          {/* Header */}
+          <div className="bg-[#0A1628] px-6 py-5 flex items-center justify-between">
+            <div>
+              <DialogTitle className="text-white text-lg font-semibold flex items-center gap-2">
+                <FileSpreadsheet className="w-5 h-5 text-blue-400" />
+                Import Leads from CSV
+              </DialogTitle>
+              <p className="text-blue-300 text-sm mt-1">
+                Upload your spreadsheet to add prospective buyers in bulk
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                setShowImportDialog(false);
+                setImportFile(null);
+                setImportResult(null);
+              }}
+              className="text-white/60 hover:text-white transition-colors p-1 rounded-lg hover:bg-white/10"
+            >
+              <XCircle className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Scrollable Container */}
+          <div className="overflow-y-auto max-h-[calc(90vh-140px)]">
+            {!importFile ? (
+              // Step 1: Upload and Guidelines
+              <div className="p-6 space-y-6">
+                {/* Drag-and-drop zone */}
+                <label className="border-2 border-dashed border-gray-200 hover:border-[#0066FF] hover:bg-blue-50/20 transition-all rounded-[16px] p-8 flex flex-col items-center justify-center cursor-pointer group text-center block">
+                  <input
+                    type="file"
+                    accept=".csv"
+                    className="hidden"
+                    onChange={handleFileChange}
+                  />
+                  <div className="h-12 w-12 rounded-full bg-blue-50 text-[#0066FF] flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm mb-4">
+                    <Upload className="h-6 w-6" />
+                  </div>
+                  <span className="font-bold text-[#0F172A] text-sm">Select or Drag CSV File</span>
+                  <span className="text-gray-400 text-xs mt-1">Supports standard CSV formats up to 5MB</span>
+                </label>
+
+                {/* Template Download & Guide */}
+                <div className="bg-[#F8FAFC] border border-gray-100 rounded-[12px] p-4 space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs font-bold text-[#64748B] uppercase tracking-wider">Instructions & Guidelines</span>
+                    <button
+                      type="button"
+                      onClick={downloadSampleCSV}
+                      className="text-xs text-[#0066FF] hover:underline font-semibold flex items-center gap-1.5"
+                    >
+                      <Download className="w-3.5 h-3.5" /> Download Template
+                    </button>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-[#64748B]">
+                    <div className="space-y-1.5">
+                      <p className="font-bold text-[#0F172A]">Required Fields:</p>
+                      <ul className="list-disc pl-4 space-y-1">
+                        <li><strong>Name</strong>: Full lead name</li>
+                        <li><strong>Phone</strong>: Active contact number</li>
+                      </ul>
+                    </div>
+                    <div className="space-y-1.5">
+                      <p className="font-bold text-[#0F172A]">Supported Enums (Sanitized):</p>
+                      <ul className="list-disc pl-4 space-y-1">
+                        <li><strong>Source</strong>: Meta, Google, 99acres, Direct</li>
+                        <li><strong>Status</strong>: New, Contacted, Site Visit Scheduled, Negotiation, Converted, Lost</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              // Step 2: Parse Review & Action
+              <div className="p-6 space-y-5">
+                {/* Summary boxes */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-emerald-50 border border-emerald-100 rounded-[12px] p-3.5 text-center">
+                    <span className="text-2xl font-bold text-[#059669] block">
+                      {importResult?.valid.length || 0}
+                    </span>
+                    <span className="text-[11px] font-bold text-[#059669] uppercase tracking-wider">
+                      Ready to Import
+                    </span>
+                  </div>
+                  <div className="bg-amber-50 border border-amber-100 rounded-[12px] p-3.5 text-center">
+                    <span className="text-2xl font-bold text-[#D97706] block">
+                      {importResult?.invalid.length || 0}
+                    </span>
+                    <span className="text-[11px] font-bold text-[#D97706] uppercase tracking-wider">
+                      Skipped Rows (Errors)
+                    </span>
+                  </div>
+                </div>
+
+                {/* Valid Leads Preview */}
+                {importResult?.valid && importResult.valid.length > 0 && (
+                  <div className="space-y-2">
+                    <span className="text-xs font-bold text-[#64748B] uppercase tracking-wider block">
+                      Lead Preview (Showing first 5 rows)
+                    </span>
+                    <div className="border border-gray-100 rounded-[12px] overflow-hidden bg-white">
+                      <Table>
+                        <TableHeader className="bg-gray-50">
+                          <TableRow className="hover:bg-transparent">
+                            <TableHead className="text-[11px] font-bold text-gray-500 uppercase py-2.5 pl-3">Name</TableHead>
+                            <TableHead className="text-[11px] font-bold text-gray-500 uppercase py-2.5">Phone</TableHead>
+                            <TableHead className="text-[11px] font-bold text-gray-500 uppercase py-2.5">Source</TableHead>
+                            <TableHead className="text-[11px] font-bold text-gray-500 uppercase py-2.5 pr-3">Status</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {importResult.valid.slice(0, 5).map((lead: any, idx: number) => (
+                            <TableRow key={idx} className="border-t border-gray-100 text-xs">
+                              <TableCell className="font-semibold text-slate-800 py-2 pl-3">{lead.name}</TableCell>
+                              <TableCell className="text-slate-600 py-2">{lead.phone}</TableCell>
+                              <TableCell className="py-2">
+                                <Badge variant="outline" className={`${getSourceColor(lead.source)} text-[9px] rounded-full uppercase scale-90 -translate-x-1 origin-left border-transparent`}>
+                                  {lead.source}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="py-2 pr-3">
+                                <Badge className={`${getStatusColor(lead.status)} text-[9px] rounded-full uppercase scale-90 -translate-x-1 origin-left border-transparent shadow-none`}>
+                                  {lead.status}
+                                </Badge>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                )}
+
+                {/* Skipped Rows Logs */}
+                {importResult?.invalid && importResult.invalid.length > 0 && (
+                  <div className="space-y-2">
+                    <span className="text-xs font-bold text-[#64748B] uppercase tracking-wider block flex items-center gap-1.5 text-amber-600">
+                      <AlertTriangle className="w-4 h-4 text-amber-500" />
+                      Skipped Rows Log
+                    </span>
+                    <div className="border border-amber-100 rounded-[12px] bg-amber-50/20 overflow-y-auto max-h-[140px] p-3 text-xs space-y-2">
+                      {importResult.invalid.map((row: any, idx: number) => (
+                        <div key={idx} className="flex items-start gap-2 border-b border-amber-100/50 pb-2 last:border-0 last:pb-0">
+                          <span className="font-bold text-amber-700 whitespace-nowrap bg-amber-100/80 px-1.5 py-0.5 rounded">
+                            Row {row.rowNumber}
+                          </span>
+                          <div>
+                            <p className="text-slate-700 font-medium">{row.reason}</p>
+                            {row.data && (
+                              <p className="text-[10px] text-gray-400 mt-0.5 font-mono">
+                                Data: {JSON.stringify(row.data)}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Persistent Footer */}
+          <div className="border-t px-6 py-4 flex gap-3 bg-white">
+            {!importFile ? (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full rounded-[10px] h-10 px-6 font-semibold"
+                onClick={() => {
+                  setShowImportDialog(false);
+                  setImportFile(null);
+                  setImportResult(null);
+                }}
+              >
+                Close
+              </Button>
+            ) : (
+              <>
+                <Button
+                  type="button"
+                  disabled={importLoading}
+                  className="flex-1 bg-[#0066FF] hover:bg-[#0052CC] text-white font-semibold rounded-[10px] h-10 shadow-sm"
+                  onClick={handleConfirmImport}
+                >
+                  {importLoading ? 'Importing...' : `Confirm Import (${importResult?.valid.length || 0} Leads)`}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="rounded-[10px] h-10 px-6 font-semibold text-[#0F172A]"
+                  onClick={() => {
+                    setImportFile(null);
+                    setImportResult(null);
+                  }}
+                >
+                  Upload Another
+                </Button>
+              </>
+            )}
           </div>
         </DialogContent>
       </Dialog>

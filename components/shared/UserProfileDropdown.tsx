@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { LogOut, Settings, User, Shield, Sparkles } from "lucide-react";
+import { LogOut, Settings, User, Shield, Sparkles, Loader2 } from "lucide-react";
 import Link from "next/link";
 
 interface UserProfile {
@@ -14,6 +14,7 @@ interface UserProfile {
 export function UserProfileDropdown() {
   const [isOpen, setIsOpen] = useState(false);
   const [user, setUser] = useState<UserProfile | null>(null);
+  const [isSwitching, setIsSwitching] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -70,6 +71,32 @@ export function UserProfileDropdown() {
 
   const initials = user.name.slice(0, 2).toUpperCase();
 
+  const handleSwitchRole = async (newRole: string) => {
+    if (!user || newRole === user.role) return;
+    setIsSwitching(true);
+    try {
+      const response = await fetch("/api/auth/switch-role", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role: newRole }),
+      });
+      if (response.ok) {
+        let redirect = "/command-center";
+        if (newRole === "MD") redirect = "/dashboard";
+        else if (newRole === "BROKER" || newRole === "VP_SALES") redirect = "/sales";
+        else if (newRole === "SITE_MANAGER" || newRole === "ADMIN") redirect = "/construction";
+        
+        window.location.href = redirect;
+      } else {
+        console.error("Failed to switch role");
+      }
+    } catch (err) {
+      console.error("Error switching role:", err);
+    } finally {
+      setIsSwitching(false);
+    }
+  };
+
   const handleLogout = () => {
     window.location.href = "/api/auth/logout";
   };
@@ -77,17 +104,17 @@ export function UserProfileDropdown() {
   const getRoleBadgeColor = (role: string) => {
     switch (role.toUpperCase()) {
       case "MD":
-        return "from-purple-500/20 to-indigo-500/20 text-indigo-400 border-indigo-500/30";
+        return "from-purple-500/20 to-indigo-500/20 text-indigo-500 border-indigo-500/30 bg-purple-50/50";
       case "VP_SALES":
       case "VP SALES":
-        return "from-blue-500/20 to-cyan-500/20 text-blue-400 border-blue-500/30";
+      case "BROKER":
+        return "from-blue-500/20 to-cyan-500/20 text-blue-500 border-blue-500/30 bg-blue-50/50";
       case "SITE_MANAGER":
       case "SITE MANAGER":
-        return "from-amber-500/20 to-orange-500/20 text-amber-400 border-amber-500/30";
       case "ADMIN":
-        return "from-rose-500/20 to-red-500/20 text-rose-400 border-rose-500/30";
+        return "from-amber-500/20 to-orange-500/20 text-amber-500 border-amber-500/30 bg-amber-50/50";
       default:
-        return "from-slate-500/20 to-slate-600/20 text-slate-400 border-slate-500/30";
+        return "from-slate-500/20 to-slate-600/20 text-slate-400 border-slate-500/30 bg-slate-50/50";
     }
   };
 
@@ -115,7 +142,7 @@ export function UserProfileDropdown() {
             <div className="flex flex-col min-w-0">
               <span className="font-bold text-slate-900 text-sm truncate flex items-center gap-1">
                 {user.name}
-                <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0 animate-pulse" />
               </span>
               <span className="text-[11px] text-slate-500 truncate mt-0.5">
                 {user.email}
@@ -123,15 +150,61 @@ export function UserProfileDropdown() {
             </div>
           </div>
 
-          {/* User Role Badge */}
-          <div className="py-3 border-b border-slate-100 flex items-center justify-between">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Workspace Role</span>
-            <span
-              className={`inline-flex items-center gap-1 rounded-full bg-gradient-to-r px-2.5 py-0.5 text-[10px] font-extrabold uppercase border ${getRoleBadgeColor(user.role)}`}
-            >
-              <Shield className="w-3 h-3" />
-              {user.role}
-            </span>
+          {/* User Role Selector */}
+          <div className="py-3 border-b border-slate-100 flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Workspace Role</span>
+              <span
+                className={`inline-flex items-center gap-1 rounded-full bg-gradient-to-r px-2.5 py-0.5 text-[10px] font-extrabold uppercase border ${getRoleBadgeColor(user.role)}`}
+              >
+                <Shield className="w-3 h-3 animate-pulse" />
+                {user.role}
+              </span>
+            </div>
+            
+            <div className="flex flex-col gap-1.5 mt-1 bg-slate-50/50 p-2 rounded-xl border border-slate-200/40">
+              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1">Switch Role (for testing)</label>
+              <div className="grid grid-cols-3 gap-1 relative">
+                {isSwitching && (
+                  <div className="absolute inset-0 bg-white/70 backdrop-blur-[1px] flex items-center justify-center z-10 rounded-lg">
+                    <Loader2 className="w-4 h-4 animate-spin text-[#0066FF]" />
+                  </div>
+                )}
+                <button 
+                  onClick={() => handleSwitchRole("MD")}
+                  disabled={isSwitching}
+                  className={`text-[9px] font-extrabold py-1 px-1.5 rounded-lg border text-center transition-all cursor-pointer ${
+                    user.role === "MD"
+                      ? "bg-purple-600 text-white border-purple-600 shadow-sm"
+                      : "bg-white hover:bg-slate-100 text-slate-600 border-slate-200"
+                  }`}
+                >
+                  MD
+                </button>
+                <button 
+                  onClick={() => handleSwitchRole("BROKER")}
+                  disabled={isSwitching}
+                  className={`text-[9px] font-extrabold py-1 px-1.5 rounded-lg border text-center transition-all cursor-pointer ${
+                    user.role === "BROKER"
+                      ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                      : "bg-white hover:bg-slate-100 text-slate-600 border-slate-200"
+                  }`}
+                >
+                  Broker
+                </button>
+                <button 
+                  onClick={() => handleSwitchRole("SITE_MANAGER")}
+                  disabled={isSwitching}
+                  className={`text-[9px] font-extrabold py-1 px-1.5 rounded-lg border text-center transition-all cursor-pointer ${
+                    user.role === "SITE_MANAGER"
+                      ? "bg-amber-600 text-white border-amber-600 shadow-sm"
+                      : "bg-white hover:bg-slate-100 text-slate-600 border-slate-200"
+                  }`}
+                >
+                  Manager
+                </button>
+              </div>
+            </div>
           </div>
 
           {/* Navigation Options */}

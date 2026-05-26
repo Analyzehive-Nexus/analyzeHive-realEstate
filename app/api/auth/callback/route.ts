@@ -37,6 +37,8 @@ export async function GET(req: NextRequest) {
       .eq('email', email)
       .single();
 
+    const isNewUser = !userRecord;
+
     if (userRecord) {
       role = userRecord.role; // Use DB role if already set (can be overridden by admin)
       userId = userRecord.id;
@@ -117,7 +119,7 @@ export async function GET(req: NextRequest) {
 
     // Role-based redirect after login
     let redirectPath = '/command-center'; // fallback
-    if (!hasCompany) {
+    if (isNewUser) {
       redirectPath = '/onboarding';
     } else {
       switch (role) {

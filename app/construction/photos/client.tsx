@@ -56,6 +56,21 @@ export default function PhotosClient({
   const [dbMissing, setDbMissing] = useState(tableMissing);
   const [missingSql, setMissingSql] = useState(tableSql);
   const [copied, setCopied] = useState(false);
+  const [userName, setUserName] = useState("Staff");
+
+  useEffect(() => {
+    const getCookie = (name: string) => {
+      if (typeof document === "undefined") return null;
+      const value = `; ${document.cookie}`;
+      const parts = value.split(`; ${name}=`);
+      if (parts.length === 2) return decodeURIComponent(parts.pop()!.split(";").shift() || "");
+      return null;
+    };
+    const name = getCookie("user_name");
+    if (name) {
+      setUserName(name.charAt(0).toUpperCase() + name.slice(1));
+    }
+  }, []);
 
   // Filters State
   const [filterProject, setFilterProject] = useState("all");
@@ -153,10 +168,13 @@ export default function PhotosClient({
       setCaption("");
       setProjectName("Tower A");
 
-      // Reload lists
-      const fresh = await fetchSitePhotos();
-      if (fresh.success && fresh.data) {
-        setPhotos(fresh.data);
+      // Instantly prepend the new photo to local state for instantaneous visual feedback
+      if (res.data) {
+        const newPhoto = {
+          ...res.data,
+          uploaded_by_user: { name: userName }
+        };
+        setPhotos(prev => [newPhoto, ...prev]);
         setDbMissing(false);
       }
     }
@@ -187,11 +205,8 @@ export default function PhotosClient({
         description: "The site photo has been permanently removed."
       });
       
-      // Reload lists
-      const fresh = await fetchSitePhotos();
-      if (fresh.success && fresh.data) {
-        setPhotos(fresh.data);
-      }
+      // Instantly remove photo from local state for instantaneous deletion feedback
+      setPhotos(prev => prev.filter(p => p.id !== id));
     }
   };
 

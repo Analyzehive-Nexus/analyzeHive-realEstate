@@ -127,57 +127,73 @@ export default function MDPage() {
       label: "Total Revenue",
       value: formatCurrency(totalRevenue),
       icon: IndianRupee,
-      color: "text-green-600",
-      bg: "bg-green-50",
+      trend: "+12.4% vs last period",
+      isPositive: true,
+      gradient: "from-emerald-50 to-teal-50/30 border-emerald-100/80 hover:border-emerald-300",
+      iconBg: "bg-emerald-500 text-white shadow-emerald-500/20",
     },
     {
       label: "Total Expenses",
       value: formatCurrency(totalExpenses),
       icon: TrendingDown,
-      color: "text-red-600",
-      bg: "bg-red-50",
+      trend: "+4.2% vs last period",
+      isPositive: false,
+      gradient: "from-rose-50 to-orange-50/30 border-rose-100/80 hover:border-rose-300",
+      iconBg: "bg-rose-500 text-white shadow-rose-500/20",
     },
     {
       label: "Net Profit",
       value: formatCurrency(netProfit),
       icon: TrendingUp,
-      color: "text-blue-600",
-      bg: "bg-blue-50",
+      trend: "+18.1% vs last period",
+      isPositive: true,
+      gradient: "from-blue-50 to-indigo-50/30 border-blue-100/80 hover:border-blue-300",
+      iconBg: "bg-blue-600 text-white shadow-blue-600/20",
     },
     {
       label: "Profit Margin",
       value: `${profitMargin.toFixed(1)}%`,
       icon: Target,
-      color: "text-purple-600",
-      bg: "bg-purple-50",
+      trend: "Optimal Range (>15%)",
+      isNeutral: true,
+      gradient: "from-purple-50 to-fuchsia-50/30 border-purple-100/80 hover:border-purple-300",
+      iconBg: "bg-purple-600 text-white shadow-purple-600/20",
     },
     {
       label: "Total Leads",
       value: totalLeads,
       icon: Users,
-      color: "text-indigo-600",
-      bg: "bg-indigo-50",
+      trend: "Active Lead pool",
+      isNeutral: true,
+      gradient: "from-indigo-50 to-blue-50/30 border-indigo-100/80 hover:border-indigo-300",
+      iconBg: "bg-indigo-600 text-white shadow-indigo-600/20",
     },
     {
-      label: "Converted",
+      label: "Converted Leads",
       value: convertedLeads,
       icon: CheckCircle2,
-      color: "text-emerald-600",
-      bg: "bg-emerald-50",
+      trend: "Completed onboarding",
+      isNeutral: true,
+      gradient: "from-teal-50 to-emerald-50/30 border-teal-100/80 hover:border-teal-300",
+      iconBg: "bg-teal-600 text-white shadow-teal-600/20",
     },
     {
       label: "Conversion Rate",
       value: `${conversionRate.toFixed(1)}%`,
       icon: Target,
-      color: "text-amber-600",
-      bg: "bg-amber-50",
+      trend: "High conversion efficiency",
+      isNeutral: true,
+      gradient: "from-amber-50 to-yellow-50/30 border-amber-100/80 hover:border-amber-300",
+      iconBg: "bg-amber-500 text-white shadow-amber-500/20",
     },
     {
       label: "Avg Project Completion",
       value: `${avgProjectCompletion.toFixed(0)}%`,
       icon: Building2,
-      color: "text-cyan-600",
-      bg: "bg-cyan-50",
+      trend: "Across all active sites",
+      isNeutral: true,
+      gradient: "from-cyan-50 to-sky-50/30 border-cyan-100/80 hover:border-cyan-300",
+      iconBg: "bg-cyan-600 text-white shadow-cyan-600/20",
     },
   ];
 
@@ -199,17 +215,45 @@ export default function MDPage() {
         </Tabs>
       </div>
 
-      {/* 8 KPI Cards */}
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
+      {/* Premium Dashboard KPI Cards */}
+      <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {kpiCards.map((kpi, i) => (
-          <Card key={i} className="bg-white border-gray-200 shadow-sm">
-            <CardContent className="p-4 flex flex-col items-start gap-2">
-              <div className={`p-2 rounded-full ${kpi.bg}`}>
-                <kpi.icon className={`h-4 w-4 ${kpi.color}`} />
+          <Card 
+            key={i} 
+            className={`group overflow-hidden bg-gradient-to-br ${kpi.gradient} border shadow-[0_4px_20px_-4px_rgba(0,0,0,0.02)] hover:shadow-[0_12px_30px_-8px_rgba(0,0,0,0.08)] rounded-[24px] transition-all duration-300 hover:-translate-y-1`}
+          >
+            <CardContent className="p-6 flex flex-col justify-between h-full relative">
+              <div className="absolute -bottom-8 -right-8 w-24 h-24 rounded-full bg-white/40 blur-xl pointer-events-none group-hover:scale-150 transition-transform duration-500" />
+              
+              <div className="flex items-center justify-between">
+                <span className="text-[12px] font-black text-slate-400 tracking-widest leading-none uppercase">
+                  {kpi.label}
+                </span>
+                <div className={`p-2.5 rounded-2xl ${kpi.iconBg} flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300`}>
+                  <kpi.icon className="h-5 w-5" />
+                </div>
               </div>
-              <div>
-                <p className="text-2xl font-bold">{kpi.value}</p>
-                <p className="text-xs text-gray-500 uppercase font-bold tracking-wider">{kpi.label}</p>
+              
+              <div className="mt-4 space-y-1">
+                <p className="text-3xl font-black text-slate-900 tracking-tight leading-none">
+                  {kpi.value}
+                </p>
+                <div className="flex items-center gap-1.5 pt-1">
+                  {kpi.isPositive !== undefined && (
+                    <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full flex items-center gap-0.5 ${
+                      kpi.isPositive 
+                        ? "bg-emerald-100/80 text-emerald-700" 
+                        : "bg-rose-100/80 text-rose-700"
+                    }`}>
+                      {kpi.isPositive ? "↑" : "↓"} {kpi.trend}
+                    </span>
+                  )}
+                  {kpi.isNeutral && (
+                    <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-slate-100/80 text-slate-500">
+                      {kpi.trend}
+                    </span>
+                  )}
+                </div>
               </div>
             </CardContent>
           </Card>

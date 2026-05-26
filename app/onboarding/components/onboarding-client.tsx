@@ -167,11 +167,31 @@ export default function OnboardingClient({
   };
 
   const handleFinishOnboarding = () => {
+    let redirectPath = "/command-center";
+    let roleName = "command center";
+    
+    switch (sessionUser.role) {
+      case "MD":
+        redirectPath = "/dashboard";
+        roleName = "executive dashboard";
+        break;
+      case "BROKER":
+      case "VP_SALES":
+        redirectPath = "/sales";
+        roleName = "sales dashboard";
+        break;
+      case "SITE_MANAGER":
+      case "ADMIN":
+        redirectPath = "/construction";
+        roleName = "construction dashboard";
+        break;
+    }
+
     toast({
       title: "Onboarding Complete!",
-      description: "Welcome to Flow. Redirecting to your broker dashboard..."
+      description: `Welcome to Flow. Redirecting to your ${roleName}...`
     });
-    router.push("/sales");
+    router.push(redirectPath);
   };
 
   return (
