@@ -2,6 +2,7 @@
 import { ResponsiveTable } from "@/components/ui/responsive-table";
 
 import { useState, useEffect } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { getPnLData, Period, PnLData } from "./actions";
 import {
   Download,
@@ -29,8 +30,14 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 
 export default function ProfitLossPage() {
-  const [period, setPeriod] = useState<Period>("month");
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const period = (searchParams?.get("period") as Period) || "month";
+
   const [cache, setCache] = useState<Record<Period, PnLData | null>>({
+    week: null,
     month: null,
     quarter: null,
     year: null,
@@ -40,23 +47,20 @@ export default function ProfitLossPage() {
   useEffect(() => {
     async function loadInitialData() {
       try {
-        // Fetch month first to render the page as fast as possible
-        const monthData = await getPnLData("month");
-        setCache((prev) => ({ ...prev, month: monthData }));
+        // Fetch the active period first to render it as fast as possible
+        const activeData = await getPnLData(period);
+        setCache((prev) => ({ ...prev, [period]: activeData }));
         setLoading(false);
 
-        // Fetch remaining periods in the background silently
-        getPnLData("quarter")
-          .then((qData) => {
-            setCache((prev) => ({ ...prev, quarter: qData }));
-          })
-          .catch((err) => console.error("Error prefetching quarter data:", err));
-
-        getPnLData("year")
-          .then((yData) => {
-            setCache((prev) => ({ ...prev, year: yData }));
-          })
-          .catch((err) => console.error("Error prefetching year data:", err));
+        // Prefetch remaining periods in the background silently
+        const otherPeriods = (["week", "month", "quarter", "year"] as Period[]).filter((p) => p !== period);
+        for (const p of otherPeriods) {
+          getPnLData(p)
+            .then((data) => {
+              setCache((prev) => ({ ...prev, [p]: data }));
+            })
+            .catch((err) => console.error(`Error prefetching ${p} data:`, err));
+        }
       } catch (error) {
         console.error("Failed to load initial P&L data:", error);
         setLoading(false);
@@ -65,20 +69,24 @@ export default function ProfitLossPage() {
     loadInitialData();
   }, []);
 
-  const handlePeriodChange = async (newPeriod: Period) => {
-    setPeriod(newPeriod);
-    if (!cache[newPeriod]) {
-      setLoading(true);
-      try {
-        const result = await getPnLData(newPeriod);
-        setCache((prev) => ({ ...prev, [newPeriod]: result }));
-      } catch (error) {
-        console.error(`Failed to fetch P&L data for ${newPeriod}:`, error);
-      } finally {
+  useEffect(() => {
+    async function loadData() {
+      if (!cache[period]) {
+        setLoading(true);
+        try {
+          const result = await getPnLData(period);
+          setCache((prev) => ({ ...prev, [period]: result }));
+        } catch (error) {
+          console.error(`Failed to fetch P&L data for ${period}:`, error);
+        } finally {
+          setLoading(false);
+        }
+      } else {
         setLoading(false);
       }
     }
-  };
+    loadData();
+  }, [period]);
 
   const formatCurrency = (value: number) => {
     if (value >= 1e7) return `₹${(value / 1e7).toFixed(2)}Cr`;
@@ -112,6 +120,16 @@ export default function ProfitLossPage() {
     URL.revokeObjectURL(url);
   };
 
+  useEffect(() => {
+    const handleGlobalExport = () => {
+      exportCSV();
+    };
+    window.addEventListener("export-dashboard-report", handleGlobalExport);
+    return () => {
+      window.removeEventListener("export-dashboard-report", handleGlobalExport);
+    };
+  }, [data, period]);
+
   if (loading || !data) {
     return (
       <div className="flex items-center justify-center h-[400px]">
@@ -144,8 +162,21 @@ export default function ProfitLossPage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <Tabs value={period} onValueChange={(val) => handlePeriodChange(val as Period)}>
+          <Tabs 
+            value={period} 
+            onValueChange={(val) => {
+              const params = new URLSearchParams(searchParams?.toString() || "");
+              params.set("period", val);
+              router.push(`${pathname}?${params.toString()}`);
+            }}
+          >
             <TabsList className="bg-[#F1F5F9] border border-slate-200/60 p-1 rounded-xl h-11">
+              <TabsTrigger
+                value="week"
+                className="rounded-lg px-4 text-xs font-bold transition-all data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-indigo-600"
+              >
+                This Week
+              </TabsTrigger>
               <TabsTrigger
                 value="month"
                 className="rounded-lg px-4 text-xs font-bold transition-all data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-indigo-600"

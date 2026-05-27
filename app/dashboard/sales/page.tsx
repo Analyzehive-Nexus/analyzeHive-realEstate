@@ -2,7 +2,8 @@
 import { ResponsiveTable } from "@/components/ui/responsive-table";
 
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useSearchParams, useRouter, usePathname } from "next/navigation"
 import { Users, Target, Building2, TrendingUp, Medal, Download } from "lucide-react"
 
 import { Card } from "@/components/ui/card"
@@ -82,7 +83,33 @@ const pipelineMovement = [
 ];
 
 export default function SalesPerformancePage() {
-  const [period, setPeriod] = useState("This Month");
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const periodMap: Record<string, string> = {
+    week: "This Week",
+    month: "This Month",
+    quarter: "This Quarter",
+    year: "This Year",
+  };
+
+  const inversePeriodMap: Record<string, string> = {
+    "This Week": "week",
+    "This Month": "month",
+    "This Quarter": "quarter",
+    "This Year": "year",
+  };
+
+  const urlPeriod = searchParams?.get("period") || "month";
+  const period = periodMap[urlPeriod] || "This Month";
+
+  const handlePeriodChange = (p: string) => {
+    const nextUrlPeriod = inversePeriodMap[p] || "month";
+    const params = new URLSearchParams(searchParams?.toString() || "");
+    params.set("period", nextUrlPeriod);
+    router.push(`${pathname}?${params.toString()}`);
+  };
 
   const exportCSV = () => {
     const rows = brokerLeaderboard.map((b) => [b.name, b.leads, b.conv, b.rev]);
@@ -98,6 +125,16 @@ export default function SalesPerformancePage() {
     URL.revokeObjectURL(url);
   };
 
+  useEffect(() => {
+    const handleGlobalExport = () => {
+      exportCSV();
+    };
+    window.addEventListener("export-dashboard-report", handleGlobalExport);
+    return () => {
+      window.removeEventListener("export-dashboard-report", handleGlobalExport);
+    };
+  }, [period]);
+
   return (
     <div className="p-8 max-w-[1800px] mx-auto pb-24 space-y-10 font-sans text-[#0F172A]">
       
@@ -109,10 +146,10 @@ export default function SalesPerformancePage() {
         </div>
         
         <div className="flex items-center gap-1 bg-slate-100/50 p-1 rounded-[10px] border border-[#E8ECF0]">
-          {['This Month', 'Last Month', 'This Quarter', 'YTD'].map(p => (
+          {['This Week', 'This Month', 'This Quarter', 'This Year'].map(p => (
             <button
               key={p}
-              onClick={() => setPeriod(p)}
+              onClick={() => handlePeriodChange(p)}
               className={`px-4 py-2 rounded-[6px] text-[13px] font-bold transition-all ${
                 period === p 
                   ? 'bg-white text-[#0066FF] shadow-sm' 

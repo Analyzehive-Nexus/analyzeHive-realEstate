@@ -3,6 +3,7 @@ import { ResponsiveTable } from "@/components/ui/responsive-table";
 
 
 import { useState, useEffect } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { getCashFlowData, Period, CashFlowData } from "./actions";
 import { Download, Loader2, TrendingUp, TrendingDown } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,7 +29,11 @@ import {
 } from "recharts";
 
 export default function CashFlowPage() {
-  const [period, setPeriod] = useState<Period>("month");
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const period = (searchParams?.get("period") as Period) || "month";
   const [data, setData] = useState<CashFlowData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -69,6 +74,16 @@ export default function CashFlowPage() {
     URL.revokeObjectURL(url);
   };
 
+  useEffect(() => {
+    const handleGlobalExport = () => {
+      exportCSV();
+    };
+    window.addEventListener("export-dashboard-report", handleGlobalExport);
+    return () => {
+      window.removeEventListener("export-dashboard-report", handleGlobalExport);
+    };
+  }, [data, period]);
+
   if (loading || !data) {
     return (
       <div className="flex justify-center items-center h-[400px]">
@@ -93,7 +108,14 @@ export default function CashFlowPage() {
           <p className="text-gray-500">Track inflows, outflows, and net position</p>
         </div>
         <div className="flex gap-3">
-          <Tabs value={period} onValueChange={(val) => setPeriod(val as Period)}>
+          <Tabs 
+            value={period} 
+            onValueChange={(val) => {
+              const params = new URLSearchParams(searchParams?.toString() || "");
+              params.set("period", val);
+              router.push(`${pathname}?${params.toString()}`);
+            }}
+          >
             <TabsList>
               <TabsTrigger value="week">Week</TabsTrigger>
               <TabsTrigger value="month">Month</TabsTrigger>

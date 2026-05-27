@@ -3,7 +3,7 @@
 import { supabaseAdmin } from "@/lib/supabase";
 import { cookies } from "next/headers";
 
-export type Period = "month" | "quarter" | "year";
+export type Period = "week" | "month" | "quarter" | "year";
 
 function getDateRange(period: Period): { start: Date; end: Date } {
   const now = new Date();
@@ -11,6 +11,9 @@ function getDateRange(period: Period): { start: Date; end: Date } {
   let start = new Date(now);
 
   switch (period) {
+    case "week":
+      start.setDate(now.getDate() - 7);
+      break;
     case "month":
       start.setMonth(now.getMonth() - 1);
       break;
