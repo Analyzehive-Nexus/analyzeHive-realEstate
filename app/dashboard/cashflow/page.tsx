@@ -1,8 +1,11 @@
 "use client";
+
+export const dynamic = "force-dynamic";
+
 import { ResponsiveTable } from "@/components/ui/responsive-table";
 
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { getCashFlowData, Period, CashFlowData } from "./actions";
 import { Download, Loader2, TrendingUp, TrendingDown } from "lucide-react";
@@ -28,7 +31,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-export default function CashFlowPage() {
+function CashFlowPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -211,5 +214,17 @@ export default function CashFlowPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function CashFlowPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex justify-center items-center h-[400px]">
+        <Loader2 className="animate-spin w-8 h-8 text-blue-500" />
+      </div>
+    }>
+      <CashFlowPageContent />
+    </Suspense>
   );
 }

@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+export const dynamic = "force-dynamic";
+
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { createBrowserClient } from "@/lib/supabase-browser";
 import { getDashboardData, Period, DashboardData } from "./actions";
@@ -71,7 +73,7 @@ const ChartTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
-export default function MDPage() {
+function MDPageContent() {
   const supabase = createBrowserClient();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -564,5 +566,17 @@ export default function MDPage() {
         </SheetContent>
       </Sheet>
     </div>
+  );
+}
+
+export default function MDPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center h-[400px]">
+        <Loader2 className="w-8 h-8 animate-spin text-[#0066FF]" />
+      </div>
+    }>
+      <MDPageContent />
+    </Suspense>
   );
 }

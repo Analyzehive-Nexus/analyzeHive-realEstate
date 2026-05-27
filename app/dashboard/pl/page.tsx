@@ -1,7 +1,10 @@
 "use client";
+
+export const dynamic = "force-dynamic";
+
 import { ResponsiveTable } from "@/components/ui/responsive-table";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { getPnLData, Period, PnLData } from "./actions";
 import {
@@ -29,7 +32,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 
-export default function ProfitLossPage() {
+function ProfitLossPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -402,6 +405,18 @@ export default function ProfitLossPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function ProfitLossPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center h-[400px]">
+        <Loader2 className="w-8 h-8 animate-spin text-[#0066FF]" />
+      </div>
+    }>
+      <ProfitLossPageContent />
+    </Suspense>
   );
 }
 

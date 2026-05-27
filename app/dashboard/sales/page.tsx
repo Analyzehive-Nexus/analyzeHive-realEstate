@@ -1,8 +1,11 @@
 "use client";
+
+export const dynamic = "force-dynamic";
+
 import { ResponsiveTable } from "@/components/ui/responsive-table";
 
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useSearchParams, useRouter, usePathname } from "next/navigation"
 import { Users, Target, Building2, TrendingUp, Medal, Download } from "lucide-react"
 
@@ -82,7 +85,7 @@ const pipelineMovement = [
   { week: "Wk 4", new: 54, contacted: 48, visited: 24, negotiation: 12, won: 8 },
 ];
 
-export default function SalesPerformancePage() {
+function SalesPerformancePageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -346,4 +349,16 @@ export default function SalesPerformancePage() {
 
     </div>
   )
+}
+
+export default function SalesPerformancePage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center h-[400px]">
+        <span className="text-slate-500 font-medium">Loading sales analytics...</span>
+      </div>
+    }>
+      <SalesPerformancePageContent />
+    </Suspense>
+  );
 }
