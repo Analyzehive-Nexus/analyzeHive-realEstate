@@ -62,6 +62,7 @@ export default function AnalyticsPage() {
   const [period, setPeriod] = useState<Period>("month");
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const { activeProject } = useProject();
 
   // Interactive Selection States
@@ -76,10 +77,20 @@ export default function AnalyticsPage() {
 
   useEffect(() => {
     async function fetchData() {
-      setLoading(true);
-      const result = await getAnalyticsData(period, activeProject?.id);
-      setData(result);
-      setLoading(false);
+      if (!data) {
+        setLoading(true);
+      } else {
+        setIsRefreshing(true);
+      }
+      try {
+        const result = await getAnalyticsData(period, activeProject?.id);
+        setData(result);
+      } catch (err) {
+        console.error("Error fetching analytics data:", err);
+      } finally {
+        setLoading(false);
+        setIsRefreshing(false);
+      }
     }
     fetchData();
   }, [period, activeProject]);
@@ -414,8 +425,13 @@ export default function AnalyticsPage() {
   const currentStageAudit = funnelAudits[selectedStage] || funnelAudits.New;
 
   return (
-    <div className="p-8 max-w-[1700px] mx-auto pb-24 space-y-8 font-sans">
+    <div className={`p-8 max-w-[1700px] mx-auto pb-24 space-y-8 font-sans transition-all duration-300 ${isRefreshing ? "opacity-75 pointer-events-none" : "opacity-100"}`}>
       
+      {isRefreshing && (
+        <div className="fixed top-0 left-0 right-0 z-50 h-1.5 bg-slate-100 overflow-hidden">
+          <div className="h-full bg-gradient-to-r from-[#0066FF] via-indigo-500 to-blue-500 animate-progress-shimmer w-1/2 rounded-full" />
+        </div>
+      )}
       {/* Self-contained CSS keyframes block for visual progress bar & slide fades */}
       <style>{`
         @keyframes carouselProgress {

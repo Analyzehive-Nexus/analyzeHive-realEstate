@@ -121,13 +121,30 @@ export default async function LoginPage() {
         <div className="w-full max-w-[380px] relative z-10">
           
           {/* Card Container for right side login content */}
-          <div className="bg-white border border-slate-100 rounded-3xl p-10 md:p-12 shadow-[0_8px_32px_-12px_rgba(0,0,0,0.03)] relative overflow-hidden flex flex-col items-center">
+          <div className="bg-white/80 border border-slate-100 backdrop-blur-xl rounded-[32px] p-10 md:p-12 shadow-[0_24px_64px_-16px_rgba(15,23,42,0.06)] hover:shadow-[0_32px_80px_-20px_rgba(15,23,42,0.1)] transition-all duration-500 relative overflow-hidden flex flex-col items-center">
             
+            {/* Elegant Background Top Highlight Bar */}
+            <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-blue-600 via-indigo-500 to-violet-600" />
+
+            {/* Premium Logo inside Login Card */}
+            <div className="flex items-center gap-3 mb-8 self-start group cursor-pointer">
+              <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50/50 border border-indigo-100/50 p-2 flex items-center justify-center shadow-inner transition-all duration-300 group-hover:scale-105">
+                <img 
+                  src={logoImg.src} 
+                  alt="flowEstate Logo" 
+                  className="w-full h-full object-contain filter opacity-90 transition-opacity" 
+                />
+              </div>
+              <span className="text-[13px] font-black uppercase tracking-[0.25em] text-slate-800 transition-colors">
+                flow<span className="text-blue-600">Estate</span>
+              </span>
+            </div>
+
             {/* Header Content */}
-            <div className="text-left w-full space-y-2 mb-10">
-              <h2 className="text-2xl font-semibold text-slate-900 tracking-tight">Welcome Back</h2>
-              <p className="text-slate-400 text-xs font-medium">
-                Access your flowEstate workspace
+            <div className="text-left w-full space-y-2.5 mb-10">
+              <h2 className="text-[28px] font-black text-slate-900 tracking-tight leading-[1.25]">Welcome Back</h2>
+              <p className="text-slate-400 text-xs font-semibold tracking-wide">
+                Sign in to your flowEstate developer & enterprise workspace.
               </p>
             </div>
 
@@ -135,30 +152,30 @@ export default async function LoginPage() {
             <div className="w-full space-y-4">
               <a 
                 href={signInUrl}
-                className="btn-shine-effect flex w-full justify-center items-center py-4 bg-[#0F172A] hover:bg-[#1E293B] text-white rounded-full font-semibold text-[10px] uppercase tracking-[0.2em] shadow-sm transition-all duration-300 active:scale-[0.98] group gap-2 border border-white/5"
+                className="btn-shine-effect flex w-full justify-center items-center py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.25em] shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/30 transition-all duration-300 active:scale-[0.98] group gap-2"
               >
                 <span>Sign in with WorkOS SSO</span>
-                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform duration-300" />
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
               </a>
             </div>
 
             {/* Trust Badges - Ultra minimal, clean */}
-            <div className="mt-10 pt-6 border-t border-slate-100 w-full flex items-center justify-center gap-6 text-[8px] font-semibold text-slate-400 uppercase tracking-[0.2em] select-none">
-              <span className="flex items-center gap-2 transition-colors hover:text-slate-600">
+            <div className="mt-12 pt-6 border-t border-slate-100 w-full flex items-center justify-between text-[8px] font-bold text-slate-400/90 uppercase tracking-[0.2em] select-none">
+              <span className="flex items-center gap-1.5 transition-colors hover:text-slate-600">
                 <span className="relative flex h-1.5 w-1.5">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-60"></span>
                   <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-blue-500/80"></span>
                 </span>
-                <Lock className="w-3 h-3 text-slate-400/85" />
+                <Lock className="w-3 h-3 text-slate-400/80" />
                 SSO Secured
               </span>
               
-              <span className="flex items-center gap-2 transition-colors hover:text-slate-600">
+              <span className="flex items-center gap-1.5 transition-colors hover:text-slate-600">
                 <span className="relative flex h-1.5 w-1.5">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60"></span>
                   <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500/80"></span>
                 </span>
-                <ShieldCheck className="w-3 h-3 text-slate-400/85" />
+                <ShieldCheck className="w-3 h-3 text-slate-400/80" />
                 RLS Shielded
               </span>
             </div>

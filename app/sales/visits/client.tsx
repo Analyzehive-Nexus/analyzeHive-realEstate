@@ -188,7 +188,7 @@ export default function VisitsClient() {
 
     const { error } = await supabase
       .from("site_visits")
-      .update({ status: newStatus, updated_at: new Date().toISOString() })
+      .update({ status: newStatus })
       .eq("visit_id", visitId);
 
     if (error) {
@@ -218,7 +218,6 @@ export default function VisitsClient() {
       .update({
         scheduled_at: newScheduledAt,
         status: "Scheduled",
-        updated_at: new Date().toISOString(),
       })
       .eq("visit_id", selectedVisit.id);
 
@@ -299,13 +298,11 @@ export default function VisitsClient() {
       return;
     }
 
-    // Update lead status to Site Visit Scheduled
+    // Update lead status to Site Visit Scheduled (safeguarded against missing columns)
     await supabase
       .from("leads_customers")
       .update({
-        status: "Site Visit Scheduled",
-        last_activity: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
+        status: "Site Visit Scheduled"
       })
       .eq("id", newVisitForm.leadId);
 

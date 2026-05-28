@@ -20,6 +20,17 @@ export default async function OnboardingPage() {
 
   // If we have a logged-in user, check if they have a company in the database
   if (sessionUser && sessionUser.id) {
+    // Non-MD and Non-ADMIN users are bypassed from onboarding completely
+    if (sessionUser.role !== "MD" && sessionUser.role !== "ADMIN") {
+      let redirectPath = "/command-center";
+      if (sessionUser.role === "BROKER" || sessionUser.role === "VP_SALES") {
+        redirectPath = "/sales";
+      } else if (sessionUser.role === "SITE_MANAGER" || sessionUser.role === "SUPERVISOR" || sessionUser.role === "ADMIN") {
+        redirectPath = "/construction";
+      }
+      redirect(redirectPath);
+    }
+    
     try {
       const { data: companyRecord } = await supabaseAdmin
         .from("companies")

@@ -84,6 +84,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 export default function AnalyticsPage() {
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const { activeProject } = useProject();
 
   // Interactive Selection States
@@ -99,15 +100,28 @@ export default function AnalyticsPage() {
 
   useEffect(() => {
     async function fetchData() {
-      setLoading(true);
-      const result = await getAnalyticsData(activeProject?.id);
-      setData(result);
-      
-      // Auto-select first project returned from server if available
-      if (result && result.projectCompletion && result.projectCompletion.length > 0) {
-        setSelectedProject(result.projectCompletion[0].name);
+      if (!data) {
+        setLoading(true);
+      } else {
+        setIsRefreshing(true);
       }
-      setLoading(false);
+      try {
+        const result = await getAnalyticsData(activeProject?.id);
+        setData(result);
+        
+        // Auto-select first project returned from server if available
+        if (result && result.projectCompletion && result.projectCompletion.length > 0) {
+          const exists = result.projectCompletion.some(p => p.name === selectedProject);
+          if (!exists) {
+            setSelectedProject(result.projectCompletion[0].name);
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching analytics data:", err);
+      } finally {
+        setLoading(false);
+        setIsRefreshing(false);
+      }
     }
     fetchData();
   }, [activeProject]);
@@ -177,6 +191,27 @@ export default function AnalyticsPage() {
       }
     ];
   }, [data]);
+
+  const sanitizedProjectCompletion = useMemo(() => {
+    const projectCompletion = data?.projectCompletion;
+    if (!projectCompletion) return [];
+    return projectCompletion
+      .filter((p) => p.completion > 0)
+      .map((p) => {
+        let cleanName = p.name;
+        cleanName = cleanName.replace(/Analyzehive\s+/gi, "");
+        cleanName = cleanName.replace(/Heights\s+/gi, "");
+        cleanName = cleanName.replace(/\s*-\s*Flow\s*Heights/gi, "");
+        cleanName = cleanName.replace(/Premium\s+Residences/gi, "Tower B");
+        cleanName = cleanName.replace(/Flow\s+Villas/gi, "Villas");
+        cleanName = cleanName.replace(/Flow\s+Commercial/gi, "Commercial");
+        return {
+          ...p,
+          originalName: p.name,
+          name: cleanName,
+        };
+      });
+  }, [data?.projectCompletion]);
 
   // Autoplay effect for AI panel
   useEffect(() => {
@@ -262,7 +297,7 @@ export default function AnalyticsPage() {
     return (
       <div className="p-8 max-w-[1400px] mx-auto space-y-8 animate-pulse">
         <Skeleton className="h-8 w-48 rounded-[8px]" />
-        <div className="grid grid-cols-2 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
           {Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)}
         </div>
         <div className="grid grid-cols-1 gap-6">
@@ -291,6 +326,8 @@ export default function AnalyticsPage() {
     monthlyExpenses,
   } = data;
 
+
+
   const kpiCards = [
     { 
       label: "Total Revenue", 
@@ -302,7 +339,9 @@ export default function AnalyticsPage() {
       glowShadow: "hover:shadow-[0_20px_40px_rgba(0,102,255,0.16)]",
       borderColor: "border-l-[#0066FF]",
       progress: 85,
-      progressBarColor: "bg-[#0066FF]"
+      progressBarColor: "bg-[#0066FF]",
+      trend: 12.4,
+      desc: "Revenue from operations"
     },
     { 
       label: "Total Leads", 
@@ -314,7 +353,9 @@ export default function AnalyticsPage() {
       glowShadow: "hover:shadow-[0_20px_40px_rgba(99,102,241,0.16)]",
       borderColor: "border-l-indigo-600",
       progress: 92,
-      progressBarColor: "bg-indigo-600"
+      progressBarColor: "bg-indigo-600",
+      trend: 8.2,
+      desc: "Total captured inquiries"
     },
     { 
       label: "Conversion Rate", 
@@ -326,7 +367,9 @@ export default function AnalyticsPage() {
       glowShadow: "hover:shadow-[0_20px_40px_rgba(168,85,247,0.16)]",
       borderColor: "border-l-purple-600",
       progress: 76,
-      progressBarColor: "bg-purple-600"
+      progressBarColor: "bg-purple-600",
+      trend: 1.5,
+      desc: "Leads converted to buyers"
     },
     { 
       label: "Avg Completion", 
@@ -338,7 +381,9 @@ export default function AnalyticsPage() {
       glowShadow: "hover:shadow-[0_20px_40px_rgba(16,185,129,0.16)]",
       borderColor: "border-l-emerald-600",
       progress: Math.round(avgProjectCompletion),
-      progressBarColor: "bg-emerald-600"
+      progressBarColor: "bg-emerald-600",
+      trend: 4.8,
+      desc: "Avg physical construction status"
     },
     { 
       label: "Pending Demands", 
@@ -350,7 +395,9 @@ export default function AnalyticsPage() {
       glowShadow: "hover:shadow-[0_20px_40px_rgba(245,158,11,0.16)]",
       borderColor: "border-l-amber-600",
       progress: 88,
-      progressBarColor: "bg-amber-600"
+      progressBarColor: "bg-amber-600",
+      trend: -15.0,
+      desc: "Material requests needing review"
     },
     { 
       label: "Active Projects", 
@@ -362,7 +409,9 @@ export default function AnalyticsPage() {
       glowShadow: "hover:shadow-[0_20px_40px_rgba(6,182,212,0.16)]",
       borderColor: "border-l-cyan-600",
       progress: 95,
-      progressBarColor: "bg-cyan-600"
+      progressBarColor: "bg-cyan-600",
+      trend: 2.0,
+      desc: "Sites under active construction"
     },
   ];
 
@@ -389,7 +438,13 @@ export default function AnalyticsPage() {
   };
 
   return (
-    <div className="p-8 max-w-[1400px] mx-auto space-y-8 font-sans pb-24 relative">
+    <div className={`p-8 max-w-[1400px] mx-auto space-y-8 font-sans pb-24 relative transition-all duration-300 ${isRefreshing ? "opacity-75 pointer-events-none" : "opacity-100"}`}>
+      
+      {isRefreshing && (
+        <div className="fixed top-0 left-0 right-0 z-50 h-1.5 bg-slate-100 overflow-hidden">
+          <div className="h-full bg-gradient-to-r from-[#0066FF] via-indigo-500 to-blue-500 animate-progress-shimmer w-1/2 rounded-full" />
+        </div>
+      )}
       
       {/* Self-contained CSS keyframes block for visual progress bar & slide fades */}
       <style>{`
@@ -422,24 +477,32 @@ export default function AnalyticsPage() {
       {/* 6 KPI Cards */}
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         {kpiCards.map((kpi, i) => (
-          <Card key={i} className={`bg-white border-slate-200 shadow-[0_4px_16px_rgba(0,0,0,0.03)] rounded-[20px] hover:-translate-y-1 ${kpi.glowShadow} transition-all duration-300 border-l-[4px] ${kpi.borderColor} relative overflow-hidden group min-h-[145px]`}>
+          <Card key={i} className={`bg-white/90 backdrop-blur-md border border-slate-200/60 shadow-[0_8px_30px_rgba(0,0,0,0.02)] rounded-[20px] hover:-translate-y-1 ${kpi.glowShadow} transition-all duration-300 border-l-[4px] ${kpi.borderColor} relative overflow-hidden group min-h-[145px]`}>
             {/* Soft decorative accent glow inside */}
             <div 
               className="absolute top-0 right-0 w-28 h-28 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" 
               style={{ background: `radial-gradient(circle at top right, ${kpi.glowColor}, transparent 70%)` }}
             />
             
-            <CardContent className="p-4.5 flex flex-col justify-between h-full relative">
+            <CardContent className="p-5 flex flex-col justify-between h-full relative">
               <div>
                 <div className="flex justify-between items-start mb-3.5">
                   <div className={`p-3 rounded-full ${kpi.bg} border border-current/10 shadow-[0_0_15px_rgba(255,255,255,0.8)] relative flex items-center justify-center shrink-0`}>
                     <div className={`absolute inset-0 rounded-full opacity-40 blur-[4px] group-hover:opacity-80 transition-opacity duration-300 ${kpi.bg}`} />
                     <kpi.icon className={`h-5.5 w-5.5 ${kpi.color} relative z-10`} />
                   </div>
+                  
+                  {kpi.trend !== 0 && (
+                    <div className={`flex items-center gap-0.5 text-[10px] font-black px-2.5 py-1 rounded-full border shadow-sm ${kpi.trend > 0 ? 'text-emerald-700 bg-emerald-50/70 border-emerald-100' : 'text-rose-700 bg-rose-50/70 border-rose-100'}`}>
+                      {kpi.trend > 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                      {kpi.trend > 0 ? `+${kpi.trend.toFixed(1)}%` : `${kpi.trend.toFixed(1)}%`}
+                    </div>
+                  )}
                 </div>
                 <div>
                   <h3 className="text-[22px] font-black text-[#0F172A] tracking-tight leading-none">{kpi.value}</h3>
                   <p className="text-[10px] font-black text-[#475569] uppercase tracking-[0.08em] mt-2">{kpi.label}</p>
+                  <p className="text-[9.5px] text-[#64748B] font-bold mt-1.5 truncate" title={kpi.desc}>{kpi.desc}</p>
                 </div>
               </div>
 
@@ -540,7 +603,7 @@ export default function AnalyticsPage() {
       )}
 
       {/* Revenue Trend - Composed Area Chart */}
-      <Card className="bg-white border-slate-200 shadow-[0_4px_16px_rgba(0,0,0,0.025)] rounded-[20px] overflow-hidden">
+      <Card className="bg-white/90 backdrop-blur-md border border-slate-200/60 shadow-[0_8px_30px_rgba(0,0,0,0.02)] rounded-[20px] overflow-hidden">
         <CardHeader className="p-5 border-b border-slate-100 bg-[#FCFDFE]">
           <CardTitle className="font-bold text-[#0F172A] text-[16px] m-0">Revenue Trend</CardTitle>
           <p className="text-[12px] text-[#64748B] mt-0.5">Aggregated actual monthly cash inflows (in Lakhs)</p>
@@ -570,55 +633,80 @@ export default function AnalyticsPage() {
       {/* Two columns: Lead Source Donut + Project Completion Bar */}
       <div className="grid gap-6 md:grid-cols-2">
         {/* Lead Sources Donut Chart */}
-        <Card className="bg-white border-slate-200 shadow-[0_4px_16px_rgba(0,0,0,0.025)] rounded-[20px] overflow-hidden flex flex-col justify-between">
+        <Card className="bg-white/90 backdrop-blur-md border border-slate-200/60 shadow-[0_8px_30px_rgba(0,0,0,0.02)] rounded-[20px] overflow-hidden flex flex-col justify-between">
           <div>
             <CardHeader className="p-5 border-b border-slate-100 bg-[#FCFDFE] flex justify-between items-center flex-row space-y-0">
               <div>
                 <CardTitle className="font-bold text-[#0F172A] text-[16px] m-0">Lead Sources</CardTitle>
-                <p className="text-[12px] text-[#64748B] mt-0.5">Click slices for live Marketing Channel audits</p>
+                <p className="text-[12px] text-[#64748B] mt-0.5">Click slices or legend items for live audits</p>
               </div>
               <Badge className="bg-slate-100 hover:bg-slate-100 text-slate-800 border-none font-bold text-[10px] rounded-full px-2 py-0.5 animate-pulse">
-                Clickable
+                Interactive
               </Badge>
             </CardHeader>
-            <CardContent className="p-6 flex items-center justify-center relative">
-              <div className="h-[320px] w-full relative flex items-center justify-center">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie 
-                      data={leadSources} 
-                      cx="50%" 
-                      cy="50%" 
-                      innerRadius={80} 
-                      outerRadius={110} 
-                      paddingAngle={3} 
-                      dataKey="value" 
-                      stroke="none"
-                      onClick={(data) => {
-                        if (data && data.name) setSelectedSource(data.name);
-                      }}
-                      className="cursor-pointer"
-                    >
-                      {leadSources.map((entry, idx) => {
-                        const isSelected = entry.name === selectedSource;
-                        return (
-                          <Cell 
-                            key={idx} 
-                            fill={entry.color} 
-                            stroke={isSelected ? "#0F172A" : "none"}
-                            strokeWidth={isSelected ? 2 : 0}
-                            className={`transition-all duration-300 outline-none ${isSelected ? 'opacity-100 scale-105' : 'opacity-80 hover:opacity-100'}`} 
-                          />
-                        );
-                      })}
-                    </Pie>
-                    <RechartsTooltip content={<CustomTooltip />} />
-                    <Legend layout="vertical" align="right" verticalAlign="middle" wrapperStyle={{ fontSize: '11px', fontWeight: 600, paddingLeft: '15px' }} iconType="circle" />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="absolute flex flex-col items-center justify-center pointer-events-none translate-y-[-10px] left-[30%] md:left-[32%]">
-                  <span className="text-[36px] font-black text-[#0F172A] leading-none">{totalLeads}</span>
-                  <span className="text-[9px] font-bold text-[#94A3B8] uppercase tracking-widest mt-1.5">Total Leads</span>
+            <CardContent className="p-6">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
+                <div className="h-[280px] w-full sm:w-1/2 relative flex items-center justify-center">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie 
+                        data={leadSources} 
+                        cx="50%" 
+                        cy="50%" 
+                        innerRadius={70} 
+                        outerRadius={100} 
+                        paddingAngle={3} 
+                        dataKey="value" 
+                        stroke="none"
+                        onClick={(data) => {
+                          if (data && data.name) setSelectedSource(data.name);
+                        }}
+                        className="cursor-pointer"
+                      >
+                        {leadSources.map((entry, idx) => {
+                          const isSelected = entry.name === selectedSource;
+                          return (
+                            <Cell 
+                              key={idx} 
+                              fill={entry.color} 
+                              stroke={isSelected ? "#0F172A" : "none"}
+                              strokeWidth={isSelected ? 2 : 0}
+                              className={`transition-all duration-300 outline-none ${isSelected ? 'opacity-100 scale-105' : 'opacity-80 hover:opacity-100'}`} 
+                            />
+                          );
+                        })}
+                      </Pie>
+                      <RechartsTooltip content={<CustomTooltip />} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none translate-y-[2px]">
+                    <span className="text-[32px] font-black text-[#0F172A] leading-none">{totalLeads}</span>
+                    <span className="text-[9px] font-bold text-[#94A3B8] uppercase tracking-widest mt-1.5">Total Leads</span>
+                  </div>
+                </div>
+
+                <div className="w-full sm:w-1/2 space-y-1.5">
+                  {leadSources.map((entry, idx) => {
+                    const isSelected = entry.name === selectedSource;
+                    const percent = totalLeads ? ((entry.value / totalLeads) * 100).toFixed(0) : 0;
+                    return (
+                      <div 
+                        key={idx}
+                        onClick={() => setSelectedSource(entry.name)}
+                        className={`flex items-center justify-between p-2 rounded-[12px] cursor-pointer transition-all duration-200 border-l-[3px] ${isSelected ? 'bg-slate-50 border-l-current pl-2.5 font-bold shadow-[0_2px_8px_rgba(0,0,0,0.02)]' : 'border-l-transparent hover:bg-slate-50/50'}`}
+                        style={{ borderLeftColor: isSelected ? entry.color : undefined }}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: entry.color }} />
+                          <span className={`text-[11.5px] font-semibold ${isSelected ? 'text-[#0F172A]' : 'text-[#475569]'}`}>{entry.name}</span>
+                        </div>
+                        <div className="flex items-center gap-1 text-right">
+                          <span className="text-[11.5px] font-bold text-[#0F172A]">{entry.value}</span>
+                          <span className="text-[9px] font-semibold text-[#94A3B8]">({percent}%)</span>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </CardContent>
@@ -643,7 +731,7 @@ export default function AnalyticsPage() {
         </Card>
 
         {/* Project Completion Rounded Bar Chart */}
-        <Card className="bg-white border-slate-200 shadow-[0_4px_16px_rgba(0,0,0,0.025)] rounded-[20px] overflow-hidden flex flex-col justify-between">
+        <Card className="bg-white/90 backdrop-blur-md border border-slate-200/60 shadow-[0_8px_30px_rgba(0,0,0,0.02)] rounded-[20px] overflow-hidden flex flex-col justify-between">
           <div>
             <CardHeader className="p-5 border-b border-slate-100 bg-[#FCFDFE] flex justify-between items-center flex-row space-y-0">
               <div>
@@ -657,9 +745,9 @@ export default function AnalyticsPage() {
             <CardContent className="p-6">
               <div className="h-[320px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={projectCompletion} margin={{ top: 10, right: 10, left: -20, bottom: 5 }} barSize={30}>
+                  <BarChart data={sanitizedProjectCompletion} margin={{ top: 10, right: 10, left: -20, bottom: 5 }} barSize={30}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                    <XAxis dataKey="name" angle={-15} textAnchor="end" height={60} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#475569', fontWeight: 700 }} />
+                    <XAxis dataKey="name" angle={0} textAnchor="middle" height={30} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#475569', fontWeight: 700 }} />
                     <YAxis domain={[0, 100]} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#475569', fontWeight: 700 }} />
                     <RechartsTooltip content={<CustomTooltip />} />
                     <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 600, paddingTop: '15px' }} iconType="circle" />
@@ -668,12 +756,15 @@ export default function AnalyticsPage() {
                       name="Completion %" 
                       radius={[6, 6, 0, 0]}
                       onClick={(data) => {
-                        if (data && data.name) setSelectedProject(data.name);
+                        if (data) {
+                          const nameVal = data.originalName || (data.payload && data.payload.originalName) || data.name;
+                          if (nameVal) setSelectedProject(nameVal);
+                        }
                       }}
                       className="cursor-pointer"
                     >
-                      {projectCompletion.map((entry, index) => {
-                        const isSelected = entry.name === selectedProject;
+                      {sanitizedProjectCompletion.map((entry, index) => {
+                        const isSelected = entry.originalName === selectedProject || entry.name === selectedProject;
                         return (
                           <Cell 
                             key={`cell-${index}`} 
@@ -709,7 +800,7 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Monthly Expenses - Crimson glowing Area Chart */}
-      <Card className="bg-white border-slate-200 shadow-[0_4px_16px_rgba(0,0,0,0.025)] rounded-[20px] overflow-hidden">
+      <Card className="bg-white/90 backdrop-blur-md border border-slate-200/60 shadow-[0_8px_30px_rgba(0,0,0,0.02)] rounded-[20px] overflow-hidden">
         <CardHeader className="p-5 border-b border-slate-100 bg-[#FCFDFE]">
           <CardTitle className="font-bold text-[#0F172A] text-[16px] m-0">Monthly Expenses</CardTitle>
           <p className="text-[12px] text-[#64748B] mt-0.5">Aggregated approved operational and construct expenditures (in Lakhs)</p>

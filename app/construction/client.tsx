@@ -725,7 +725,7 @@ export default function ConstructionClient({
       </section>
 
       {/* SECTION 5 - DAILY PROGRESS REPORTS */}
-      <section className="grid lg:grid-cols-1 md:grid-cols-2 gap-8">
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="flex flex-col">
           <SectionHeading title="Daily Progress Reports" href="/construction/progress" />
           <PearlCard className="flex-1">
@@ -771,7 +771,7 @@ export default function ConstructionClient({
       </section>
 
       {/* SECTION 6 - LABOUR ATTENDANCE */}
-      <section className="grid lg:grid-cols-1 md:grid-cols-2 gap-8">
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="flex flex-col">
           <SectionHeading title="Today's Labour Attendance" href="/construction/labour" />
           <PearlCard className="flex-1 p-6 flex items-center gap-8">
@@ -894,7 +894,7 @@ export default function ConstructionClient({
       </section>
 
       {/* SECTION 9 - BUDGET VS ACTUAL SPENDING */}
-      <section className="grid lg:grid-cols-1 md:grid-cols-2 gap-8 pb-10">
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-8 pb-10">
         <div className="flex flex-col">
           <SectionHeading title="Budget Allocation Tracker" href="/construction/budget" />
           <PearlCard className="flex-1">

@@ -565,27 +565,34 @@ export async function uploadSitePhoto(formData: FormData) {
       console.warn("Storage bucket setup warning:", bucketErr.message);
     }
 
-    // 3. Upload File to Storage
-    // Clean up filename characters to be storage-safe
-    const safeFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
-    const storagePath = `${Date.now()}-${safeFileName}`;
-    const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
-      .from("site-photos")
-      .upload(storagePath, buffer, {
-        contentType: file.type,
-        upsert: true,
-      });
+    // 3. Upload File to Storage (with automatic Base64 fallback if storage API fails)
+    let publicUrl = "";
+    try {
+      const safeFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
+      const storagePath = `${Date.now()}-${safeFileName}`;
+      
+      const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
+        .from("site-photos")
+        .upload(storagePath, buffer, {
+          contentType: file.type,
+          upsert: true,
+        });
 
-    if (uploadError) {
-      return { error: `Storage upload error: ${uploadError.message}` };
+      if (uploadError) {
+        throw new Error(uploadError.message);
+      }
+
+      const {
+        data: { publicUrl: pUrl },
+      } = supabaseAdmin.storage.from("site-photos").getPublicUrl(storagePath);
+      
+      publicUrl = pUrl;
+    } catch (storageError: any) {
+      console.warn("Storage upload failed, falling back to Base64 data URL:", storageError.message);
+      publicUrl = `data:${file.type};base64,${buffer.toString("base64")}`;
     }
 
-    // 4. Get Public URL
-    const {
-      data: { publicUrl },
-    } = supabaseAdmin.storage.from("site-photos").getPublicUrl(storagePath);
-
-    // 5. Save metadata to table
+    // 4. Save metadata to table
     const { data, error } = await supabaseAdmin
       .from("site_photos")
       .insert({

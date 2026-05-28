@@ -8,6 +8,7 @@ const roleRoutes: Record<string, string[]> = {
   'BROKER': ['/sales', '/command-center', '/settings/profile'],
   'VP_SALES': ['/sales', '/command-center', '/settings/profile'],
   'SITE_MANAGER': ['/construction', '/command-center', '/settings/profile'],
+  'SUPERVISOR': ['/construction', '/command-center', '/settings/profile'],
   'ADMIN': ['/construction', '/command-center', '/settings/profile'],
 };
 
@@ -59,7 +60,7 @@ export default async function middleware(request: NextRequest, event: NextFetchE
     let defaultRedirect = '/command-center';
     if (userRole === 'MD') defaultRedirect = '/dashboard';
     else if (userRole === 'BROKER' || userRole === 'VP_SALES') defaultRedirect = '/sales';
-    else if (userRole === 'SITE_MANAGER' || userRole === 'ADMIN') defaultRedirect = '/construction';
+    else if (userRole === 'SITE_MANAGER' || userRole === 'ADMIN' || userRole === 'SUPERVISOR') defaultRedirect = '/construction';
 
     return NextResponse.redirect(new URL(defaultRedirect, request.url));
   }

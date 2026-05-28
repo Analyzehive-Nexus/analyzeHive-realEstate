@@ -119,7 +119,7 @@ export async function GET(req: NextRequest) {
 
     // Role-based redirect after login
     let redirectPath = '/command-center'; // fallback
-    if (isNewUser) {
+    if (isNewUser && (role === 'MD' || role === 'ADMIN')) {
       redirectPath = '/onboarding';
     } else {
       switch (role) {
@@ -131,6 +131,7 @@ export async function GET(req: NextRequest) {
           redirectPath = '/sales';
           break;
         case 'SITE_MANAGER':
+        case 'SUPERVISOR':
         case 'ADMIN':
           redirectPath = '/construction';
           break;
